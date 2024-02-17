@@ -1,5 +1,6 @@
 #include <sys/socket.h>
 #include <fcntl.h>
+#include <time.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

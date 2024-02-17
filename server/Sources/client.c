@@ -12,8 +12,10 @@
 #include "../Includes/sock_ops.h"
 #include "../Includes/session_ops.h"
 #include <time.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <unistd.h>
 #include <string.h>
 #include <dirent.h>
 #include <sys/types.h>
