@@ -83,7 +83,11 @@ pthread_mutex_unlock(&serverRunningMtx);
 	for(int i=0;i<numOfClients;i++){
 		pthread_join(clients[i].threadid,NULL);
 		pthread_mutex_lock(&socketMtx);
+		if(clients[i].socket){
+
 		close(clients[i].socket);
+
+		}
 		pthread_mutex_unlock(&socketMtx);
 	}
 	free(clients);

@@ -30,7 +30,7 @@ var Paddle = {
   new: function (side) {
     return {
       width: 18,
-      height: 70,
+      height: 100,
       x: side === 'left' ? 150 : this.canvas.width - 150,
       y: (this.canvas.height / 2) - 35,
       score: 0,
@@ -55,7 +55,7 @@ var Game = {
     this.paddle = Paddle.new.call(this, 'right');
     this.ball = Ball.new.call(this);
 
-    this.paddle.speed = 32;
+    this.paddle.speed = 25;
     this.running = this.over = false;
     this.turn = this.paddle;
     this.timer = this.round = 0;
