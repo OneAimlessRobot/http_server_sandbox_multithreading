@@ -1,7 +1,7 @@
 #ifndef IO_OPS_H
 #define IO_OPS_H
 
-int readall(int sd,char* buff,int64_t size);
+int readall(client* c,char* buff,int64_t size);
 
 int sendallchunkedfd(client* c,int fd);
 

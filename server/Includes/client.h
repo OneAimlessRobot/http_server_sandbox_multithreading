@@ -13,9 +13,7 @@ typedef struct client{
 	struct sockaddr_in client_addr;
 }client;
 
-client** initClients(void);
-
 void* runClientConnection(void* args);
+void handleDisconnect(client* c);
 
-void freeClients(client***clients);
 #endif

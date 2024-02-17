@@ -21,7 +21,7 @@
 #define SEND_FUNC_TO_USE sendsome
 //#define SEND_FUNC_TO_USE write
 int readsome(int sd,char buff[],u_int64_t size){
-                int iResult;
+		int iResult;
                 struct timeval tv;
                 fd_set rfds;
                 FD_ZERO(&rfds);
@@ -115,13 +115,14 @@ int sendsome_chat_gpt(int sd, char *buff, size_t size) {
 }
 
 
-int readall(int sd,char* buff,int64_t size){
+int readall(client*c,char* buff,int64_t size){
         int64_t len=0,
 		 total=0;
 while(total<size){
-        len=readsome(sd,buff+total,size-total);
+        len=readsome(c->socket,buff+total,size-total);
 	if(!len||len==-2){
-		//fprintf(logstream,"Timeout no reading!!!!: %s\nsocket %d\n",strerror(errno),sd);
+	
+        //fprintf(logstream,"Timeout no reading!!!!: %s\nsocket %d\n",strerror(errno),sd);
                 break;
 	}
 	else if(len<0){
@@ -154,14 +155,15 @@ while(total<size){
 	if(len<0){
 	if (errno == EAGAIN || errno == EWOULDBLOCK) {
         	if(logging){
-		fprintf(logstream,"Li %ld ao todo!!!! readall bem sucedido!! A socket e %d\n",total,sd);
+		fprintf(logstream,"Li %ld ao todo!!!! readall bem sucedido!! A socket e %d\n",total,c->socket);
 		}
 	}
 	else if(errno==ENOTCONN){
 		if(logging){
 		fprintf(logstream,"Li %ld ao todo!!!! readall saiu com erro!!!!!:\nAvisando server para desconectar!\n%s\n",total,strerror(errno));
 		}
-
+		handleDisconnect(c);
+		return total;
 	}
 	else if(len!=-2){
 		if(logging){
@@ -238,7 +240,6 @@ while ((numread = read(fd,buff, BUFFSIZE)) > 0) {
 		if(logging){
 		fprintf(logstream,"Timeout no sending!!!!: %s\nsocket %d\n",strerror(errno),c->socket);
                 }
-		
 		continue;
 	}
 	if(sent<0){
@@ -257,6 +258,7 @@ while ((numread = read(fd,buff, BUFFSIZE)) > 0) {
                 fprintf(logstream,"Conexão largada!!\nSIGPIPE!!!!!: %s\n",strerror(errno));
                 }
 		//raise(SIGPIPE);
+		handleDisconnect(c);
 		return 0;
 		//continue
         }
@@ -264,6 +266,7 @@ while ((numread = read(fd,buff, BUFFSIZE)) > 0) {
 		if(logging){
                 fprintf(logstream,"Outro erro qualquer!!!!!: %d %s\n",errno,strerror(errno));
                 }
+	
 		break;
 		//continue;
 	

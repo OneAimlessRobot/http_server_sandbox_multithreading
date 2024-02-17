@@ -37,7 +37,7 @@ getpeername(c->socket , (struct sockaddr*)&c->client_addr , (socklen_t*)&socklen
 
                     close(c->socket);
 }
-static void handleDisconnect(client* c){
+void handleDisconnect(client* c){
 		pthread_mutex_lock(&socketMtx);
 		dropConnection(c);
 		//Close the socket and mark as 0 in list for reuse
@@ -130,7 +130,7 @@ void handleConnection(client* c){
  			memset(c->peerbuff,0,PAGE_DATA_SIZE);
 			http_request req;
 			http_header header;
-			if(READ_FUNC_TO_USE(c->socket,c->peerbuff,PAGE_DATA_SIZE-1)!=-2){
+			if(READ_FUNC_TO_USE(c,c->peerbuff,PAGE_DATA_SIZE-1)!=-2){
                   	if(errno == ECONNRESET){
 				handleDisconnect(c);
 			}
@@ -144,7 +144,7 @@ void handleConnection(client* c){
 				free(req.data);
 				req.data=malloc(req.header->content_length+1);
 				memset(req.data,0,req.header->content_length+1);
-				if(READ_FUNC_TO_USE(c->socket,req.data,req.header->content_length)!=-2){
+				if(READ_FUNC_TO_USE(c,req.data,req.header->content_length)!=-2){
 
 				
 
@@ -194,9 +194,6 @@ static void sigpipe_handler(int signal){
 	if(logging){
 	fprintf(logstream,"SIGPIPE!!!!!\n");
 	}
-	pthread_mutex_lock(&clientMtx);
-	handleDisconnect(clientToDrop+signal);
-	pthread_mutex_unlock(&clientMtx);
 }
 
 void* runClientConnection(void* args){
