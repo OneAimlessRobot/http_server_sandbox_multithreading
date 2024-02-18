@@ -241,6 +241,7 @@ void initializeServer(int max_quota,int logs){
 	socklenpointer=sizeof(clientAddress);
 	loadLogins();
 	loadAdmins();
+	servComp=gzip;
 	mainLoop();
 	freeLogins(&currLogins);
 }

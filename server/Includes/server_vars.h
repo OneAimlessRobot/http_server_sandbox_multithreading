@@ -1,6 +1,6 @@
 #ifndef SERVER_VARS_H
 #define SERVER_VARS_H
-#define COMPRESSION 0
+#define COMPRESSION 1
 typedef struct compMethod{
 	char * cmdTool,*fileExt,*encodingExt;
 	
@@ -13,5 +13,5 @@ extern char currDir[PATHSIZE];
 extern int serverOn;
 extern FILE* logstream;
 extern pthread_mutex_t socketMtx,clientMtx,serverRunningMtx;
-extern compMethod servComp;
+extern compMethod br,gzip,servComp;
 #endif

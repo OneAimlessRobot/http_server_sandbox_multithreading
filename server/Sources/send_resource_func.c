@@ -8,11 +8,14 @@
 #include "../Includes/server_innards.h"
 #include <sys/socket.h>
 #include <errno.h>
+#include <unistd.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <sys/types.h>
-static char* compressionCmd = "%s -1 -c %s >> %s";
+#include <sys/wait.h>
+static char* compressionCmd = "%s -c %s";
 //static char* compressionCmd = "gzip -c %s > %s.gzip";
 static char inpathbuff[PATHSIZE*2];
 static char outpathbuff[PATHSIZE*2];
@@ -24,23 +27,36 @@ static int compressFile(char* target,int enable,int result[2]){
 	memset(outpathbuff,0,PATHSIZE*2);
 	snprintf(outpathbuff,(PATHSIZE*2)-1,"%s.%s",inpathbuff,servComp.fileExt);
 	memset(cmd,0,PATHSIZE*6);
-	close(open(outpathbuff,O_CREAT|O_TRUNC,0777));
-	snprintf(cmd,(PATHSIZE*6)-1,compressionCmd,servComp.cmdTool,inpathbuff,outpathbuff);
-	printf("%s\n",cmd);
-	
-	system(cmd);
-	
-	if(logging){
-		fprintf(logstream,"STATUS DA COMPRESSÂO: %s\n",strerror(errno));
-	}
-	result[0]=open(outpathbuff,O_RDONLY,0777);
-	result[1]=1;
+	int fd=result[0]=open(outpathbuff,O_RDWR|O_CREAT|O_TRUNC,0777);
 	if(result[0]<0){
 			if(logging){
 			fprintf(logstream,"Invalid filepath: %s\n%s\n",outpathbuff,strerror(errno));
 			}
 			return -1;
 	}
+	snprintf(cmd,(PATHSIZE*6)-1,compressionCmd,servComp.cmdTool,inpathbuff);
+	printf("%s\n",cmd);
+	char* argv[ARGVMAX]={0};
+	makeargv(cmd,argv);
+	int pid=fork();
+	switch(pid){
+		case -1:
+			close(fd);
+			return -1;
+		case 0:
+			dup2(fd,1);
+			execvp(argv[0],argv);
+			perror("exec na compressao\n");
+			exit(-1);
+
+		default:
+			wait(NULL);
+			break;
+
+
+	}
+	result[1]=1;
+	
 	}
 	else{
 	result[0]=open(inpathbuff,O_RDONLY,0777);
