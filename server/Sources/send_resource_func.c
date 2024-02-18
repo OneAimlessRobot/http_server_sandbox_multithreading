@@ -30,15 +30,15 @@ static int compressFile(char* target,int enable,int result[2]){
 	
 	system(cmd);
 	
-	//if(logging){
+	if(logging){
 		fprintf(logstream,"STATUS DA COMPRESSÂO: %s\n",strerror(errno));
-	//}
+	}
 	result[0]=open(outpathbuff,O_RDONLY,0777);
 	result[1]=1;
 	if(result[0]<0){
-			//if(logging){
+			if(logging){
 			fprintf(logstream,"Invalid filepath: %s\n%s\n",outpathbuff,strerror(errno));
-			//}
+			}
 			return -1;
 	}
 	}
@@ -47,9 +47,9 @@ static int compressFile(char* target,int enable,int result[2]){
 	result[1]=0;
 	
 	if(result[0]<0){
-		//if(logging){
+		if(logging){
 			fprintf(logstream,"Invalid filepath: %s\n%s\n",inpathbuff,strerror(errno));
-		//}
+		}
 		return -1;
 
 	}

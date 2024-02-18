@@ -69,7 +69,6 @@ static void handleCurrentActivity(client*c,http_request req){
 	}
 	if(findInStringArr(header.split_encoding,servComp.encodingExt)>=0){
 		compress=COMPRESSION;
-		printf("Cliente vai receber ar comprimido!!!!!!\n");
 	}
 	switch(header.type){
 	case GET:
