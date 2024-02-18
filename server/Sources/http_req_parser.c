@@ -49,8 +49,8 @@ void print_field_arr(FILE* fstream,http_header_field* fields){
 }
 void print_http_req_header(FILE* fstream,http_header header){
 
-		fprintf(fstream,"HTTP REQUEST HEADER:\n\nType: %s\nTarget: %s\nVersion: %s\nHost: %s\nmimetype: %s\nOS: %s\nContent-Length: %d\n",getREQStringFromType(header.type),header.target,header.version,header.host,header.mimetype,header.os,header.content_length);
-
+		fprintf(fstream,"HTTP REQUEST HEADER:\n\nType: %s\nTarget: %s\nVersion: %s\nHost: %s\nmimetype: %s\nOS: %s\nContent-Length: %d\nAccepted-encoding: %s\nAccepted-encoding (split): \n",getREQStringFromType(header.type),header.target,header.version,header.host,header.mimetype,header.os,header.content_length,header.encodingcopy);
+		print_string_arr(fstream,header.split_encoding);
 }
 static char* find_field_value_in_field_arr(char* fieldName,http_header_field* fields){
 
@@ -112,6 +112,9 @@ static void spawnHTTPHeader(char* buff,http_header*result){
 	//strcpy(result.mimetype,find_field_value_in_field_arr("Accept",fieldarr));
 	strcpy(result->mimetype,defaultMimetype);
 	strcpy(result->os,find_field_value_in_field_arr("sec-ch-ua-platform",fieldarr));
+	strcpy(result->encoding,find_field_value_in_field_arr("Accept-Encoding",fieldarr));
+	strcpy(result->encodingcopy,result->encoding);
+	make_str_arr(result->encoding,",",result->split_encoding,ARGVMAX);
 	result->content_length=atoi(find_field_value_in_field_arr("Content-Length",fieldarr));
 	}
 	free(fieldarr);

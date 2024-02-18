@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include "../Includes/client.h"
 #include "../Includes/server_vars.h"
+
 int logging,beeping;
 
 client* clientToDrop;
@@ -14,3 +15,5 @@ FILE* logstream=NULL;
 pthread_mutex_t socketMtx=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t clientMtx= PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t serverRunningMtx=PTHREAD_MUTEX_INITIALIZER;
+//compMethod servComp = {"brotli","br"," br"};
+compMethod servComp = {"gzip","gzip"," gzip"};

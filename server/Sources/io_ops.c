@@ -20,6 +20,8 @@
 #include "../Includes/io_ops.h"
 #define SEND_FUNC_TO_USE sendsome
 //#define SEND_FUNC_TO_USE write
+
+
 int readsome(int sd,char buff[],u_int64_t size){
 		int iResult;
                 struct timeval tv;

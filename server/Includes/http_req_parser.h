@@ -14,6 +14,9 @@ typedef struct http_header{
 	char target[FIELDSIZE],
 		version[FIELDSIZE],
 		host[FIELDSIZE],
+		*split_encoding[ARGVMAX],
+		encoding[FIELDSIZE],
+		encodingcopy[FIELDSIZE],
 		mimetype[FIELDSIZE],
 		os[FIELDSIZE];
 	int content_length;

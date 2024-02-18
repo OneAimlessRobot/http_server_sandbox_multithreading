@@ -8,7 +8,7 @@
 #include "../Includes/server_vars.h"
 #include "../Includes/send_resource_func.h"
 #include "../Includes/load_logins.h"
-#include "../Includes/server_innards.h"
+#include "../Includes/server_vars.h"
 #include "../Includes/sock_ops.h"
 #include "../Includes/session_ops.h"
 #include <time.h>
@@ -22,9 +22,9 @@
 #define READ_FUNC_TO_USE readall
 socklen_t socklenpointer;
 
-static int sendMediaData(client*c,char* buff,char* mimetype){
+static int sendMediaData(client*c,char* buff,char* mimetype,int compress){
 
-	return sendResource(c,buff,mimetype,USEFD);
+	return sendResource(c,buff,mimetype,USEFD,compress);
 }
 
 static void dropConnection(client*c){
@@ -48,7 +48,7 @@ void handleDisconnect(client* c){
 }
 
 static void handleCurrentActivity(client*c,http_request req){
-	
+	int compress=0;
 	http_header header=*(req.header);
 	/*
 	if(!clientIsLoggedIn(c)&&!stringsAreEqual(header.target,SIGN_IN_REQ)){
@@ -67,6 +67,10 @@ static void handleCurrentActivity(client*c,http_request req){
 	if(logging){
 		fprintf(logstream,"%s\n",header.target);
 	}
+	if(findInStringArr(header.split_encoding,servComp.encodingExt)>=0){
+		compress=COMPRESSION;
+		printf("Cliente vai receber ar comprimido!!!!!!\n");
+	}
 	switch(header.type){
 	case GET:
 			if(isCustomGetReq(header.target)){
@@ -74,22 +78,21 @@ static void handleCurrentActivity(client*c,http_request req){
 				char targetinout[PATHSIZE]={0};
 
 				handleCustomGetReq(c,header.target,req.data,targetinout);
-				int result=sendMediaData(c,targetinout,defaultMimetype);
+				int result=sendMediaData(c,targetinout,defaultMimetype,compress);
 				if(result<0){
 
-					sendMediaData(c,notFoundTarget,defaultMimetype);
-
+					send(c->socket,notFoundHeader,strlen(notFoundHeader),0);
 				}
 				deleteClientListingHTML();
 			}
 			else{
-				int isDir=sendMediaData(c,header.target,header.mimetype);
+				int isDir=sendMediaData(c,header.target,header.mimetype,compress);
 				if(isDir<0){
-					sendMediaData(c,notFoundTarget,defaultMimetype);
+					send(c->socket,notFoundHeader,strlen(notFoundHeader),0);
 				
 				}
 				else if(isDir>0){
-					sendMediaData(c,generateDirListing(header.target),defaultMimetype);
+					sendMediaData(c,generateDirListing(header.target),defaultMimetype,compress);
 					deleteDirListingHTML();
 				}
 			}
@@ -99,28 +102,28 @@ static void handleCurrentActivity(client*c,http_request req){
 
 				char targetinout[PATHSIZE]={0};
 				handleCustomPostReq(c,header.target,req.data,targetinout);
-				int result=sendMediaData(c,targetinout,defaultMimetype);
+				int result=sendMediaData(c,targetinout,defaultMimetype,compress);
 				if(result<0){
-
-					sendMediaData(c,notFoundTarget,defaultMimetype);
+					send(c->socket,notFoundHeader,strlen(notFoundHeader),0);
 
 				}
 				deleteClientListingHTML();
 			}
 			else{
-				int result=sendMediaData(c,header.target,header.mimetype);
+				int result=sendMediaData(c,header.target,header.mimetype,compress);
 				if(result<0){
-					sendMediaData(c,notFoundTarget,defaultMimetype);
+					send(c->socket,notFoundHeader,strlen(notFoundHeader),0);
+
 				}
 				else if(result>0){
-					sendMediaData(c,generateDirListing(header.target),defaultMimetype);
+					sendMediaData(c,generateDirListing(header.target),defaultMimetype,compress);
 					deleteDirListingHTML();
 				}
 			}
 	break;
 	default:
 		
-		sendMediaData(c,header.target,defaultMimetype);
+		sendMediaData(c,header.target,defaultMimetype,compress);
 	break;
 	}
 	

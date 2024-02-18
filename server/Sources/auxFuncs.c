@@ -142,7 +142,7 @@ int findInStringArr(char* arr[],char* nullTermStr){
 
 	
 	for (int i=0;arr[i];i++){
-		if(!strcmp(nullTermStr,arr[i])){
+		if(stringsAreEqual(nullTermStr,arr[i])){
 
 			return i;
 		}
