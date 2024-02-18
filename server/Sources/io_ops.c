@@ -47,6 +47,31 @@ int readsome(int sd,char buff[],u_int64_t size){
 		return -1;
 		}
 }
+int timedreadall(client* c,char* buff,u_int64_t size){
+		int iResult;
+                struct timeval tv;
+                fd_set rfds;
+                FD_ZERO(&rfds);
+                FD_SET(c->socket,&rfds);
+                tv.tv_sec=BIGTIMEOUTSECS;
+                tv.tv_usec=BIGTIMEOUTUSECS;
+                iResult=select(c->socket+1,&rfds,(fd_set*)0,(fd_set*)0,&tv);
+                if(iResult>0){
+
+                return readall(c,buff,size);
+
+                }
+		else if(!iResult){
+               	return -2;
+		}
+		else{
+		if(logging){
+
+		fprintf(logstream, "SELECT ERROR!!!!! READ\n");
+		}
+		return -1;
+		}
+}
 
 int sendsome(int sd,char buff[],u_int64_t size){
                 int iResult;

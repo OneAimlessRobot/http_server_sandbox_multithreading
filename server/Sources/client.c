@@ -19,7 +19,8 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/types.h>
-#define READ_FUNC_TO_USE readall
+//#define READ_FUNC_TO_USE readall
+#define READ_FUNC_TO_USE timedreadall
 socklen_t socklenpointer;
 
 static int sendMediaData(client*c,char* buff,char* mimetype,int compress){
