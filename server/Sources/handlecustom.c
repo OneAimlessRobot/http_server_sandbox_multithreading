@@ -33,7 +33,7 @@ static int currvent=0;
 
 char* customgetreqs[]={WRITE_VENT_REQ,SEE_FILES_REQ,SIGN_IN_REQ,NULL};
 
-char* custompostreqs[]={WRITE_VENT_REQ,SIGN_IN_REQ,SEE_CLIENTS_REQ,SIGN_OUT_REQ,KICK_CLIENT_REQ,NULL};
+char* custompostreqs[]={WRITE_VENT_REQ,SIGN_IN_REQ,SEE_CLIENTS_REQ,SIGN_OUT_REQ,KICK_CLIENT_REQ,WRITE_VIDEO_REQ,NULL};
 
 
 char* tmpDir=NULL;
@@ -194,6 +194,12 @@ static void handleVentReq(char* fieldmess,char targetinout[PATHSIZE]){
 	currvent++;
 }
 
+static void handleVideoPostReq(char* fieldmess,char targetinout[PATHSIZE]){
+	
+	printf("Video posted!!!!\n");
+
+}
+
 int isCustomGetReq(char* nulltermedtarget){
 	int result=0;
 	char* targetcopy= strdup(nulltermedtarget);
@@ -280,6 +286,11 @@ void handleCustomPostReq(client*c,char* target,char* contents,char targetinout[P
 	else if(!strcmp(target,KICK_CLIENT_REQ)){
 		
 		kickClientHandler(contents,targetinout);
+
+	}
+	else if(!strcmp(target,WRITE_VIDEO_REQ)){
+		
+		handleVideoPostReq(contents,targetinout);
 
 	}
 	/*else if(!strcmp(nulltermedtarget,writeventreq)){

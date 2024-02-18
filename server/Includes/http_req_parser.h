@@ -18,6 +18,12 @@ typedef struct http_header{
 		encoding[FIELDSIZE],
 		encodingcopy[FIELDSIZE],
 		mimetype[FIELDSIZE],
+		content_type_raw[FIELDSIZE],
+		content_type_copy[FIELDSIZE],
+		*content_type_split[ARGVMAX],
+		content_type[FIELDSIZE],
+		*form_boundary_split[2],
+		form_boundary[FIELDSIZE],
 		os[FIELDSIZE];
 	int content_length;
 

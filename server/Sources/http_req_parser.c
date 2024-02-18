@@ -51,6 +51,8 @@ void print_http_req_header(FILE* fstream,http_header header){
 
 		fprintf(fstream,"HTTP REQUEST HEADER:\n\nType: %s\nTarget: %s\nVersion: %s\nHost: %s\nmimetype: %s\nOS: %s\nContent-Length: %d\nAccepted-encoding: %s\nAccepted-encoding (split): \n",getREQStringFromType(header.type),header.target,header.version,header.host,header.mimetype,header.os,header.content_length,header.encodingcopy);
 		print_string_arr(fstream,header.split_encoding);
+		fprintf(fstream,"\nContent-Type (raw): %s\nContent-Type (actual): %s\nForm-boundary: %s\nContent-Type (split):\n",header.content_type_copy,header.content_type,header.form_boundary);
+		print_string_arr(fstream,header.content_type_split);
 }
 static char* find_field_value_in_field_arr(char* fieldName,http_header_field* fields){
 
@@ -115,6 +117,28 @@ static void spawnHTTPHeader(char* buff,http_header*result){
 	strcpy(result->encoding,find_field_value_in_field_arr("Accept-Encoding",fieldarr));
 	strcpy(result->encodingcopy,result->encoding);
 	make_str_arr(result->encoding,",",result->split_encoding,ARGVMAX);
+	strcpy(result->content_type_raw,find_field_value_in_field_arr("Content-Type",fieldarr));
+	if(strlen(result->content_type_raw)){
+	strcpy(result->content_type_copy,result->content_type_raw);
+	make_str_arr(result->content_type_raw,"; ",result->content_type_split,ARGVMAX);
+	
+	strcpy(result->content_type,result->content_type_split[0]);
+	if(!result->content_type_split[1]){
+	memset(result->form_boundary,0,FIELDSIZE);
+	}
+	else{
+	splitString(result->content_type_split[1],"=", result->form_boundary_split);
+	strcpy(result->form_boundary,result->form_boundary_split[1]);
+	
+	}
+	}
+	else{
+	result->content_type_split[0]=NULL;
+	result->form_boundary_split[0]=NULL;
+	memset(result->content_type_raw,0,FIELDSIZE);
+	memset(result->content_type_copy,0,FIELDSIZE);
+	memset(result->content_type,0,FIELDSIZE);
+	}
 	result->content_length=atoi(find_field_value_in_field_arr("Content-Length",fieldarr));
 	}
 	free(fieldarr);

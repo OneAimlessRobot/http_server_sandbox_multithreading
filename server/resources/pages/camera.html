@@ -38,7 +38,11 @@ a.ORIGINAL_LINK{
 <button id="start-record">Start Recording</button>
 <button id="stop-record">Stop Recording</button>
 <a id="download-video" download="test.webm">Download Video</a>
-
+<form id="post_video_form" method="post" action="/writevideo" enctype="multipart/form-data">
+  <label for="file_input">File</label>
+  <input id="file_input" name="file" type="file" />
+  <button>Upload</button>
+</form>
 <script type="text/javascript" src="../js/camera.js"></script>
 <h1>chrome://flags/#unsafely-treat-insecure-origin-as-secure</h1>
 </body>

@@ -131,6 +131,8 @@ static void handleCurrentActivity(client*c,http_request req){
 
 void handleConnection(client* c){
  			memset(c->peerbuff,0,PAGE_DATA_SIZE);
+			char *peerbuffcopy=malloc(PAGE_DATA_SIZE);
+			memset(peerbuffcopy,0,PAGE_DATA_SIZE);
 			http_request req;
 			http_header header;
 			if(READ_FUNC_TO_USE(c,c->peerbuff,PAGE_DATA_SIZE-1)!=-2){
@@ -138,9 +140,11 @@ void handleConnection(client* c){
 				handleDisconnect(c);
 			}
 			else if(strlen(c->peerbuff)){
+				memcpy(peerbuffcopy,c->peerbuff,PAGE_DATA_SIZE);
 				spawnHTTPRequest(c->peerbuff,&header,&req);
 				if(logging){
-				fprintf(logstream,"Recebemos request!!!: \n");
+				fprintf(logstream,"Recebemos request!!!:\n");
+				
 				print_http_req(logstream,req);
 				}
 				if(!strlen(req.data)&&(req.header->content_length>0)){
@@ -164,6 +168,7 @@ void handleConnection(client* c){
 			handleDisconnect(c);
 		
 			}
+			free(peerbuffcopy);
 			
 }
 
