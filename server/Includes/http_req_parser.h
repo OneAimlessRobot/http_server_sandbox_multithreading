@@ -3,7 +3,6 @@
 typedef enum {GET,POST,INFO,INVALID} http_req_type;
 
 typedef struct http_header_field{
-	char mem[FIELDSIZE];
 	char* field[2];
 
 }http_header_field;

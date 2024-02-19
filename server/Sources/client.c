@@ -131,8 +131,7 @@ static void handleCurrentActivity(client*c,http_request req){
 
 void handleConnection(client* c){
  			memset(c->peerbuff,0,PAGE_DATA_SIZE);
-			char *peerbuffcopy=malloc(PAGE_DATA_SIZE);
-			memset(peerbuffcopy,0,PAGE_DATA_SIZE);
+			char peerbuffcopy[PAGE_DATA_SIZE]={0};
 			http_request req;
 			http_header header;
 			if(READ_FUNC_TO_USE(c,c->peerbuff,PAGE_DATA_SIZE-1)!=-2){
@@ -168,7 +167,6 @@ void handleConnection(client* c){
 			handleDisconnect(c);
 		
 			}
-			free(peerbuffcopy);
 			
 }
 

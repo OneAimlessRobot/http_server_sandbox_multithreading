@@ -165,15 +165,12 @@ pthread_mutex_unlock(&serverRunningMtx);
 	close(server_socket);
 	if(clients){
 	for(int i=0;i<numOfClients;i++){
-		pthread_mutex_lock(&socketMtx);
 
 		if(clients[i].socket){
+		pthread_mutex_lock(&socketMtx);
 		clients[i].socket=0;
-		close(clients[i].socket);
-
-		}
 		pthread_mutex_unlock(&socketMtx);
-		pthread_join(clients[i].threadid,NULL);
+		}
 		
 	}
 	free(clients);
@@ -241,7 +238,8 @@ static void handleIncommingConnections(void){
 		c->logged_in=0;
 		memset(c->peerbuff,0,PAGE_DATA_SIZE);
 		pthread_create(&c->threadid,NULL,runClientConnection,(void*)c);
-		    if(logging){
+		pthread_detach(c->threadid);    
+		if(logging){
 		    fprintf(logstream,"Adding to list of sockets as socket no: %d\n" , c->socket);
                     }
 		    break;
@@ -256,13 +254,17 @@ static void handleIncommingConnections(void){
 
 static void mainLoop(void){
 	
-	
+	pthread_mutex_lock(&serverRunningMtx);
 	while(serverOn){
+	pthread_mutex_unlock(&serverRunningMtx);
 	
 	
 	handleIncommingConnections();
 	
+	pthread_mutex_lock(&serverRunningMtx);
     	}
+	
+	pthread_mutex_unlock(&serverRunningMtx);
 
 }
 

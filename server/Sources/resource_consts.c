@@ -18,7 +18,6 @@ char* incorrectLoginTarget="/index_login_incorrect.html";
 char* doubleSessionTarget="/index_login_please_logout.html";
 char* timeoutTarget="/index_login_please_timeout.html";
 char* notFoundTarget="/resources/pages/notfound.html";
-char* testScriptTarget="/resources/pages/testscript.html";
 
 /*
 char logfpath[FIELDSIZE]={0};
