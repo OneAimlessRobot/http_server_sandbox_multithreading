@@ -14,4 +14,25 @@ extern int serverOn;
 extern FILE* logstream;
 extern pthread_mutex_t socketMtx,clientMtx,serverRunningMtx;
 extern compMethod br,gzip,servComp;
+
+/*
+extern char* logfpath,* defaultTarget,
+*notFoundTarget,
+*testScriptTarget,
+*defaultTargetAdmin,
+*defaultLoginTarget,
+*doubleSessionTarget,
+*timeoutTarget,
+*incorrectLoginTarget;
+*/
+
+
+extern char
+defaultTarget[FIELDSIZE],
+defaultLoginTarget[FIELDSIZE],
+doubleSessionTarget[FIELDSIZE],
+incorrectLoginTarget[FIELDSIZE],
+* defaultVersion,
+* defaultMimetype;
+
 #endif

@@ -97,50 +97,6 @@ int sendsome(int sd,char buff[],u_int64_t size){
 		return -1;
 		}
 }
-int readsome_chat_gpt(int sd, char *buff, size_t size) {
-    int iResult;
-    struct timeval tv;
-    fd_set rfds;
-    FD_ZERO(&rfds);
-    FD_SET(sd, &rfds);
-    tv.tv_sec = SMALLTIMEOUTSECS;
-    tv.tv_usec = SMALLTIMEOUTUSECS;
-	printf("%d\n",sd+1);
-    iResult = select(sd + 1, &rfds,(fd_set*)0, (fd_set*)0, &tv);
-    if (iResult > 0) {
-        return recv(sd, buff, size, 0);
-    } else if (!iResult) {
-        return -2; // Timeout
-    } else {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            return -1; // Socket would block
-        } else {
-            return -1; // Other error
-        }
-    }
-}
-int sendsome_chat_gpt(int sd, char *buff, size_t size) {
-    int iResult;
-    struct timeval tv;
-    fd_set rfds;
-    FD_ZERO(&rfds);
-    FD_SET(sd, &rfds);
-    tv.tv_sec = SMALLTIMEOUTSECS;
-    tv.tv_usec = SMALLTIMEOUTUSECS;
-    iResult = select(sd + 1, NULL, &rfds, NULL, &tv);
-    if (iResult > 0) {
-        return send(sd, buff, size, 0);
-    } else if (!iResult) {
-        return -2; // Timeout
-    } else {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            return -1; // Socket would block
-        } else {
-            return -1; // Other error
-        }
-    }
-}
-
 
 int readall(client*c,char* buff,int64_t size){
         int64_t len=0,
@@ -204,45 +160,6 @@ while(total<size){
 
 }
 
-int send_in_chunks_chunked_chat_gpt(client*c, int fd) {
-    char chunk[BUFFSIZE];
-    size_t numread;
-    int ret;
-
-    while ((numread = read(fd,chunk,BUFFSIZE)) > 0) {
-        // Send chunk size in hex
-        char chunk_size_str[20];
-        sprintf(chunk_size_str, "%zx\r\n", numread);
-        ret = sendsome(c->socket, chunk_size_str, strlen(chunk_size_str));
-        if (ret < 0) {
-            fprintf(stderr, "Error sending chunk size: %s\n", strerror(errno));
-            return -1;
-        }
-
-        // Send chunk data
-        ret = sendsome(c->socket, chunk, numread);
-        if (ret < 0) {
-            fprintf(stderr, "Error sending chunk data: %s\n", strerror(errno));
-            return -1;
-        }
-
-        // Send chunk delimiter
-        ret = sendsome(c->socket, "\r\n", 2);
-        if (ret < 0) {
-            fprintf(stderr, "Error sending chunk delimiter: %s\n", strerror(errno));
-            return -1;
-        }
-    }
-
-    // Send final chunk
-    ret = sendsome(c->socket, "0\r\n\r\n", 5);
-    if (ret < 0) {
-        fprintf(stderr, "Error sending final chunk: %s\n", strerror(errno));
-        return -1;
-    }
-
-    return 0; // All data sent successfully
-}
 
 int sendallchunkedfd(client*c,int fd){
 

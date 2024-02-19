@@ -4,6 +4,7 @@
 #include "../Includes/http_req_parser.h"
 #include "../Includes/handlecustom.h"
 #include "../Includes/client.h"
+#include "../Includes/cfg_loading.h"
 #include "../Includes/server_vars.h"
 #include "../Includes/send_resource_func.h"
 #include "../Includes/load_logins.h"
@@ -16,7 +17,6 @@
 #include <dirent.h>
 #include <sys/types.h>
 #define SEND_SOCK_BUFF_SIZE 10000000
-#define CFG_DIR "/config.cfg"
 
 static socklen_t socklenpointer;
 static int server_socket,numOfClients,currNumOfClients;
@@ -26,89 +26,6 @@ static struct sockaddr_in server_address, clientAddress;
 static fd_set readfds;
 
 static char addressContainer[INET_ADDRSTRLEN];
-typedef struct cfg_field{
-	char mem[FIELDSIZE];
-        char* field[2];
-
-}cfg_field;
-
-cfg_field** cfgs=NULL;
-static void print_cfg_arr(FILE* fstream,cfg_field** cfgs){
-
-	for (int i=0;cfgs[i];i++){
-		
-		fprintf(fstream,"CFG no. %d:\nCFG name: %s\nCFG password: %s\n",i,cfgs[i]->field[0],cfgs[i]->field[1]);
-
-	}
-
-}
-char* find_value_in_cfg_arr(char* setting,cfg_field** cfgs){
-	if(cfgs){
-	for (int i=0;cfgs[i];i++){
-		
-		if(!strncmp(cfgs[i]->field[0],setting,FIELDSIZE)){
-			return cfgs[i]->field[1];
-		}
-	}
-	return "NO_SUCH_SETTING";
-	}
-	return "NO_SETTINGS_LOADED";
-
-}
-
-void loadCfg(void)
-{
-	int numOfCfgs=0;
-	FILE* CFGStream;
-	char path[PATHSIZE*2]={0};
-	snprintf(path,PATHSIZE*2,"%s%s",currDir,CFG_DIR);
-	if(!(CFGStream=fopen(path,"r"))){
-		
-		if(logging){
-
-			fprintf(logstream,"LOGINS NAO CARREGADOS!!!!!\nPATH INVALIDA!!!!\nPath: %s\nErro: %s\n",path,strerror(errno));
-		}
-		return;
-	}
-	char* buff=malloc(FIELDSIZE+1);
-	memset(buff,0,FIELDSIZE+1);
-	while(fgets(buff,FIELDSIZE,CFGStream)){
-	
-		numOfCfgs++;
-	
-	}
-	if(!numOfCfgs){
-		fclose(CFGStream);
-		return;
-	}
-	memset(buff,0,FIELDSIZE+1);
-	rewind(CFGStream);
-	cfgs=malloc(sizeof(cfg_field)*(numOfCfgs+1));
-	int i=0;
-	while(fgets(buff,FIELDSIZE,CFGStream)){
-		
-		cfgs[i]=malloc(sizeof(cfg_field));
-		strcpy(cfgs[i]->mem,buff);
-		splitString(cfgs[i]->mem,"=",cfgs[i]->field);
-		int valueLength=strlen(cfgs[i]->field[1]);
-		cfgs[i]->field[1][valueLength-1]=0;
-		memset(buff,0,FIELDSIZE+1);
-		i++;
-		
-
-	}
-	cfgs[i]=NULL;
-	if(logging){
-		fprintf(logstream,"\nLogins carregados:\n");
-		print_cfg_arr(logstream,cfgs);
-	}
-	fclose(CFGStream);
-	free(buff);
-	return;
-
-
-}
-
 client* getClientArrCopy(void){
 	
 	client* result= malloc(currNumOfClients*sizeof(client));
@@ -185,9 +102,9 @@ pthread_mutex_unlock(&serverRunningMtx);
 
 
 	}
-	if(currAdmins){
+	if(cfgs){
 	
-	freeLogins(&currAdmins);
+	freeCFGs(&cfgs);
 
 
 	}
@@ -219,13 +136,11 @@ static void handleIncommingConnections(void){
         	}
 		currNumOfClients++;
 		setNonBlocking(client_socket);
-		//setLinger(client_socket,0,0);
 		getpeername(client_socket , (struct sockaddr*)&clientAddress , (socklen_t*)&socklenpointer);
                 if(logging){
 		fprintf(logstream,"Client connected , ip %s , port %d \n" ,inet_ntoa(clientAddress.sin_addr) , ntohs(clientAddress.sin_port));
         	}
-		//setSocketSendBuffSize(client_socket,SEND_SOCK_BUFF_SIZE);
-	    	for(int i=0;i<numOfClients;i++){
+		for(int i=0;i<numOfClients;i++){
 		client* c=&(clients[i]);
 		pthread_mutex_lock(&socketMtx);
 		if(!c->socket){
@@ -265,6 +180,16 @@ static void mainLoop(void){
     	}
 	
 	pthread_mutex_unlock(&serverRunningMtx);
+
+}
+
+void initializeConstants(void){
+
+	strcpy(incorrectLoginTarget,find_value_in_cfg_arr("incorrectLoginTarget",cfgs));
+	strcpy(defaultLoginTarget,find_value_in_cfg_arr("defaultLoginTarget",cfgs));
+	strcpy(doubleSessionTarget,find_value_in_cfg_arr("defaultSessionTarget",cfgs));
+	strcpy(defaultTarget,find_value_in_cfg_arr("defaultTarget",cfgs));
+
 
 }
 
@@ -328,7 +253,8 @@ void initializeServer(int max_quota,int logs){
 	}
 	socklenpointer=sizeof(clientAddress);
 	loadLogins();
-	loadAdmins();
+	loadCfg();
+	initializeConstants();
 	servComp=gzip;
 	mainLoop();
 	freeLogins(&currLogins);

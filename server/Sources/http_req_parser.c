@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <netinet/in.h>
 #include "../Includes/buffSizes.h"
 #include "../Includes/auxFuncs.h"
-#include "../Includes/resource_consts.h"
+#include "../Includes/client.h"
+#include "../Includes/server_vars.h"
 #include "../Includes/http_req_parser.h"
 
 static http_req_type getREQtypeFromString(char* str){

@@ -4,10 +4,11 @@
 #include "../Includes/resource_consts.h"
 #include "../Includes/http_req_parser.h"
 #include "../Includes/handlecustom.h"
-#include "../Includes/client.h"
 #include "../Includes/server_vars.h"
+#include "../Includes/client.h"
 #include "../Includes/send_resource_func.h"
 #include "../Includes/load_logins.h"
+#include "../Includes/load_html.h"
 #include "../Includes/server_vars.h"
 #include "../Includes/sock_ops.h"
 #include "../Includes/session_ops.h"
@@ -51,16 +52,7 @@ void handleDisconnect(client* c){
 static void handleCurrentActivity(client*c,http_request req){
 	int compress=0;
 	http_header header=*(req.header);
-	/*
-	if(!clientIsLoggedIn(c)&&!stringsAreEqual(header.target,SIGN_IN_REQ)){
-		char buff[PATHSIZE]={0};
-		handleLogout(c,buff);
-		sendMediaData(c,buff,defaultMimetype);
-		printf("Cliente naaaaaaaoooo esta signed in!!!!\n");
-		//sendMediaData(c,defaultLoginTarget,defaultMimetype);
-		return;
-	}
-	printf("Cliente esta signed in!!!!\n");*/
+
 	if(!strcmp(header.target,"/")){
 
 		strcpy(header.target,defaultLoginTarget);
@@ -183,12 +175,10 @@ FD_ZERO(&c->readfd);
 		c->logged_in=0;
 	}
 	}
-	    //socket descriptor 
-pthread_mutex_lock(&socketMtx); 
-         int sd = c->socket;   //if valid socket descriptor then add to read list  
-            if(sd > 0)   
-                FD_SET( sd , &c->readfd);   
-                 
+pthread_mutex_lock(&socketMtx);
+         int sd = c->socket;
+	if(sd > 0)
+                FD_SET( sd , &c->readfd);
 pthread_mutex_unlock(&socketMtx);
             
         

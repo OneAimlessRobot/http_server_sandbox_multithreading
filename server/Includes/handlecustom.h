@@ -8,7 +8,7 @@
 #define KICK_CLIENT_REQ "/kickclient"
 #define WRITE_VIDEO_REQ "/writevideo"
 #define SEE_CLIENTS_REQ "/seeclients"
-extern char* tmpOne,*tmpTwo;
+
 extern char* customgetreqs[];
 
 extern char* custompostreqs[];
@@ -21,9 +21,4 @@ void handleCustomGetReq(client*c,char*target,char* body,char targetinout[PATHSIZ
 
 void handleCustomPostReq(client*c,char* target,char* contents,char targetinout[PATHSIZE]);
 
-char* generateDirListing(char* dir);
-
-void deleteDirListingHTML(void);
-
-void deleteClientListingHTML(void);
 #endif

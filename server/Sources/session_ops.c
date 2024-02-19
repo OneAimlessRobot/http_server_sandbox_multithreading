@@ -86,18 +86,6 @@ void handleLogin(client* c,char* fieldmess,char targetinout[PATHSIZE]){
 				}
 				
 			}
-			else if(strcmp((correctPassword=find_login_pw_in_login_arr(username[1],currAdmins)),"NO_SUCH_LOGIN")){
-				if(stringsAreEqual(correctPassword,password[1])&&!clientExists){
-					strncpy(c->username,username[1],FIELDSIZE);
-					c->running_time=0.0;
-					c->logged_in=1;
-					c->isAdmin=1;
-					memcpy(targetinout,defaultTargetAdmin,strlen(defaultTargetAdmin));
-					printf("Bem vindo %s\n",username[1]);
-					return;
-				}
-				
-			}
 	if(clientExists){
 		memset(c->username,0,FIELDSIZE);
 		c->isAdmin=0;
