@@ -3,7 +3,7 @@
 #define FIELDLENGTH 1024
 
 
-void initializeServer(int max_quota,int logs);
+void initializeServer(void);
 
 client* getClientArrCopy(void);
 

@@ -19,7 +19,7 @@
 #define SEND_SOCK_BUFF_SIZE 10000000
 
 static socklen_t socklenpointer;
-static int server_socket,numOfClients,currNumOfClients;
+static int server_socket,currNumOfClients;
 
 static struct sockaddr_in server_address, clientAddress;
 
@@ -45,8 +45,8 @@ client* getClientArrCopy(void){
 
 client* getFullClientArrCopy(void){
 	
-	client* result= malloc(numOfClients*sizeof(client));
-	for(int i=0;i<numOfClients;i++){
+	client* result= malloc(quota*sizeof(client));
+	for(int i=0;i<quota;i++){
 		
 		memset(result[i].username,0,FIELDSIZE);
 		result[i].socket=clients[i].socket;
@@ -68,7 +68,7 @@ int getCurrNumOfClients(void){
 }
 int getMaxNumOfClients(void){
 	
-	return numOfClients;
+	return quota;
 
 
 }
@@ -81,7 +81,7 @@ pthread_mutex_lock(&serverRunningMtx);
 pthread_mutex_unlock(&serverRunningMtx);
 	close(server_socket);
 	if(clients){
-	for(int i=0;i<numOfClients;i++){
+	for(int i=0;i<quota;i++){
 
 		if(clients[i].socket){
 		pthread_mutex_lock(&socketMtx);
@@ -140,7 +140,7 @@ static void handleIncommingConnections(void){
                 if(logging){
 		fprintf(logstream,"Client connected , ip %s , port %d \n" ,inet_ntoa(clientAddress.sin_addr) , ntohs(clientAddress.sin_port));
         	}
-		for(int i=0;i<numOfClients;i++){
+		for(int i=0;i<quota;i++){
 		client* c=&(clients[i]);
 		pthread_mutex_lock(&socketMtx);
 		if(!c->socket){
@@ -189,28 +189,65 @@ void initializeConstants(void){
 	strcpy(defaultLoginTarget,find_value_in_cfg_arr("defaultLoginTarget",cfgs));
 	strcpy(doubleSessionTarget,find_value_in_cfg_arr("defaultSessionTarget",cfgs));
 	strcpy(defaultTarget,find_value_in_cfg_arr("defaultTarget",cfgs));
+	logging=atoi(find_value_in_cfg_arr("logging",cfgs));
+	smalltimeoutsecs=atoi(find_value_in_cfg_arr("smalltimeoutsecs",cfgs));
+	
+	smalltimeoutusecs=atoi(find_value_in_cfg_arr("smalltimeoutusecs",cfgs));
+	
+	bigtimeoutsecs=atoi(find_value_in_cfg_arr("bigtimeoutsecs",cfgs));
+	
+	bigtimeoutusecs=atoi(find_value_in_cfg_arr("bigtimeoutusecs",cfgs));
+	
+	port=atoi(find_value_in_cfg_arr("port",cfgs));
+	
+	quota=atoi(find_value_in_cfg_arr("quota",cfgs));
+	
+	compression=atoi(find_value_in_cfg_arr("compression",cfgs));
+	if(quota<=0){
+		
+		quota=500;
 
+	}
+	if(smalltimeoutsecs<0){
+		
+		printf("Config error: timeout must be a non negative 32 bit integer!\n");
+		exit(-1);
+	}
+	if(smalltimeoutusecs<0){
+		
+		printf("Config error: timeout must be a non negative 32 bit integer!\n");
+		exit(-1);
+	}
+	if(bigtimeoutsecs<0){
+		
+		printf("Config error: timeout must be a non negative 32 bit integer!\n");
+		exit(-1);
+	}
+	if(bigtimeoutusecs<0){
+		
+		printf("Config error: timeout must be a non negative 32 bit integer!\n");
+		exit(-1);
+	}
 
 }
 
-void initializeServer(int max_quota,int logs){
+void initializeServer(void){
+
 	
-/*	if(!(logstream=fopen(logfpath,"w"))){
+	memset(currDir,0,PATHSIZE);
 	
-		perror("logs will be made to stdout!!!! could not create log file\n");
-		logstream=stdout;
-	}
-*/	
+	getcwd(currDir,PATHSIZE);
+
+	loadCfg();
+	initializeConstants();
+	
 	logstream=stdout;
 	serverOn=1;
-	logging=logs;
-	beeping=0;
 	currNumOfClients=0;
-	numOfClients=max_quota;
 	signal(SIGINT,sigint_handler);
-	clients=malloc(sizeof(client)*max_quota);
-	memset(clients,0,sizeof(client)*max_quota);
-	for(int i=0;i<max_quota;i++){
+	clients=malloc(sizeof(client)*quota);
+	memset(clients,0,sizeof(client)*quota);
+	for(int i=0;i<quota;i++){
 
 		clients[i].socket=0;
 		clients[i].running_time=0.0;
@@ -231,12 +268,9 @@ void initializeServer(int max_quota,int logs){
         }
 
 	
-	memset(currDir,0,PATHSIZE);
-	
-	getcwd(currDir,PATHSIZE);
 
         server_address.sin_family=AF_INET;
-        server_address.sin_port= htons(PORT);
+        server_address.sin_port= htons(port);
         server_address.sin_addr.s_addr = INADDR_ANY;
         socklen_t socklength=sizeof(server_address);
         
@@ -253,10 +287,7 @@ void initializeServer(int max_quota,int logs){
 	}
 	socklenpointer=sizeof(clientAddress);
 	loadLogins();
-	loadCfg();
-	initializeConstants();
 	servComp=gzip;
 	mainLoop();
-	freeLogins(&currLogins);
 }
 

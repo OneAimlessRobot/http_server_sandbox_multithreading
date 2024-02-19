@@ -28,8 +28,8 @@ int readsome(int sd,char buff[],u_int64_t size){
                 fd_set rfds;
                 FD_ZERO(&rfds);
                 FD_SET(sd,&rfds);
-                tv.tv_sec=SMALLTIMEOUTSECS;
-                tv.tv_usec=SMALLTIMEOUTUSECS;
+                tv.tv_sec=smalltimeoutsecs;
+                tv.tv_usec=smalltimeoutusecs;
                 iResult=select(sd+1,&rfds,(fd_set*)0,(fd_set*)0,&tv);
                 if(iResult>0){
 
@@ -53,8 +53,8 @@ int timedreadall(client* c,char* buff,u_int64_t size){
                 fd_set rfds;
                 FD_ZERO(&rfds);
                 FD_SET(c->socket,&rfds);
-                tv.tv_sec=BIGTIMEOUTSECS;
-                tv.tv_usec=BIGTIMEOUTUSECS;
+                tv.tv_sec=bigtimeoutsecs;
+                tv.tv_usec=bigtimeoutusecs;
                 iResult=select(c->socket+1,&rfds,(fd_set*)0,(fd_set*)0,&tv);
                 if(iResult>0){
 
@@ -79,8 +79,8 @@ int sendsome(int sd,char buff[],u_int64_t size){
                 fd_set rfds;
                 FD_ZERO(&rfds);
                 FD_SET(sd,&rfds);
-                tv.tv_sec=SMALLTIMEOUTSECS;
-                tv.tv_usec=SMALLTIMEOUTUSECS;
+                tv.tv_sec=smalltimeoutsecs;
+                tv.tv_usec=smalltimeoutusecs;
                 iResult=select(sd+1,(fd_set*)0,&rfds,(fd_set*)0,&tv);
                 if(iResult>0){
 

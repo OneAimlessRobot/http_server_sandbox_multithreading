@@ -24,6 +24,7 @@
 #define READ_FUNC_TO_USE timedreadall
 socklen_t socklenpointer;
 
+
 static int sendMediaData(client*c,char* buff,char* mimetype,int compress){
 
 	return sendResource(c,buff,mimetype,USEFD,compress);
@@ -51,6 +52,8 @@ void handleDisconnect(client* c){
 
 static void handleCurrentActivity(client*c,http_request req){
 	int compress=0;
+	
+	char targetinout[PATHSIZE]={0};
 	http_header header=*(req.header);
 
 	if(!strcmp(header.target,"/")){
@@ -61,13 +64,12 @@ static void handleCurrentActivity(client*c,http_request req){
 		fprintf(logstream,"%s\n",header.target);
 	}
 	if(findInStringArr(header.split_encoding,servComp.encodingExt)>=0){
-		compress=COMPRESSION;
+		compress=compression;
 	}
 	switch(header.type){
 	case GET:
 			if(isCustomGetReq(header.target)){
 
-				char targetinout[PATHSIZE]={0};
 
 				handleCustomGetReq(c,header.target,req.data,targetinout);
 				int result=sendMediaData(c,targetinout,defaultMimetype,compress);
@@ -92,7 +94,6 @@ static void handleCurrentActivity(client*c,http_request req){
 	case POST:
 			if(isCustomPostReq(header.target)){
 
-				char targetinout[PATHSIZE]={0};
 				handleCustomPostReq(c,header.target,req.data,targetinout);
 				int result=sendMediaData(c,targetinout,defaultMimetype,compress);
 				if(result<0){
@@ -123,7 +124,6 @@ static void handleCurrentActivity(client*c,http_request req){
 
 void handleConnection(client* c){
  			memset(c->peerbuff,0,PAGE_DATA_SIZE);
-			char peerbuffcopy[PAGE_DATA_SIZE]={0};
 			http_request req;
 			http_header header;
 			if(READ_FUNC_TO_USE(c,c->peerbuff,PAGE_DATA_SIZE-1)!=-2){
@@ -131,7 +131,6 @@ void handleConnection(client* c){
 				handleDisconnect(c);
 			}
 			else if(strlen(c->peerbuff)){
-				memcpy(peerbuffcopy,c->peerbuff,PAGE_DATA_SIZE);
 				spawnHTTPRequest(c->peerbuff,&header,&req);
 				if(logging){
 				fprintf(logstream,"Recebemos request!!!:\n");
@@ -170,7 +169,7 @@ FD_ZERO(&c->readfd);
         if(c->logged_in){
 	double client_run_time=c->running_time;
         c->running_time=client_run_time+running_time;	
-	if(c->running_time>SESSION_TIME_USECS){
+	if(c->running_time>session_time_usecs){
 
 		c->logged_in=0;
 	}

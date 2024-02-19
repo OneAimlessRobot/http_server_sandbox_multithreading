@@ -44,7 +44,7 @@ void loadCfg(void)
 		
 		if(logging){
 
-			fprintf(logstream,"LOGINS NAO CARREGADOS!!!!!\nPATH INVALIDA!!!!\nPath: %s\nErro: %s\n",path,strerror(errno));
+			printf("CVARS NAO CARREGADOS!!!!!\nPATH INVALIDA!!!!\nPath: %s\nErro: %s\n",path,strerror(errno));
 		}
 		return;
 	}
@@ -76,8 +76,8 @@ void loadCfg(void)
 
 	}
 	cfgs[i]=NULL;
-		fprintf(logstream,"\nCFG carregada:\n");
-		print_cfg_arr(logstream,cfgs);
+		printf("\nCFGs carregadas:\n");
+		print_cfg_arr(stdout,cfgs);
 	fclose(CFGStream);
 	free(buff);
 	return;

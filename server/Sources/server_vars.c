@@ -6,7 +6,23 @@
 #include "../Includes/cfg_loading.h"
 #include "../Includes/server_vars.h"
 
-int logging,beeping;
+int logging;
+
+int smalltimeoutsecs,smalltimeoutusecs;
+
+int bigtimeoutsecs,bigtimeoutusecs;
+
+int port;
+
+int quota;
+
+int recv_socket_size;
+
+int send_socket_size;
+
+int session_time_usecs;
+
+int compression;
 
 client* clientToDrop;
 client* clients=NULL;
