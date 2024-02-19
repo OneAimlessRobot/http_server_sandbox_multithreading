@@ -22,6 +22,17 @@ extern char* logfpath,* defaultTarget,
 *timeoutTarget,
 *incorrectLoginTarget;
 
+/*
+extern char logfpath[FIELDSIZE],
+ defaultTarget[FIELDSIZE],
+notFoundTarget[FIELDSIZE],
+testScriptTarget[FIELDSIZE],
+defaultTargetAdmin[FIELDSIZE],
+defaultLoginTarget[FIELDSIZE],
+doubleSessionTarget[FIELDSIZE],
+timeoutTarget[FIELDSIZE],
+incorrectLoginTarget[FIELDSIZE];
+*/
 extern FILE* logstream;
 
 #endif

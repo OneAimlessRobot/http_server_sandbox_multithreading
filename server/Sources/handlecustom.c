@@ -189,7 +189,7 @@ static void handleVentReq(char* fieldmess,char targetinout[PATHSIZE]){
 		
 	}
 	free(pathbuff);
-	memcpy(targetinout,testScriptTarget,strlen(testScriptTarget));
+	memcpy(targetinout,defaultTarget,strlen(defaultTarget));
 	fclose(stream);
 	currvent++;
 }

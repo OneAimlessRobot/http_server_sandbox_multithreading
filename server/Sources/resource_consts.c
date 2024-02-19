@@ -19,6 +19,18 @@ char* doubleSessionTarget="/index_login_please_logout.html";
 char* timeoutTarget="/index_login_please_timeout.html";
 char* notFoundTarget="/resources/pages/notfound.html";
 char* testScriptTarget="/resources/pages/testscript.html";
+
+/*
+char logfpath[FIELDSIZE]={0};
+char defaultTarget[FIELDSIZE]={0};
+char defaultTargetAdmin[FIELDSIZE]={0};
+char defaultLoginTarget[FIELDSIZE]={0};
+char incorrectLoginTarget[FIELDSIZE]={0};
+char doubleSessionTarget[FIELDSIZE]={0};
+char timeoutTarget[FIELDSIZE]={0};
+char notFoundTarget[FIELDSIZE]={0};
+char testScriptTarget[FIELDSIZE]={0};
+*/
 char* defaultVersion="HTTP/1.1";
 char* defaultMimetype="*/*";
 
