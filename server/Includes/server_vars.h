@@ -1,6 +1,6 @@
 #ifndef SERVER_VARS_H
 #define SERVER_VARS_H
-#define COMPRESSION 1
+#define COMPRESSION 0
 typedef struct compMethod{
 	char * cmdTool,*fileExt,*encodingExt;
 	
