@@ -185,10 +185,10 @@ static void mainLoop(void){
 
 void initializeConstants(void){
 
-	strcpy(incorrectLoginTarget,find_value_in_cfg_arr("incorrectLoginTarget",cfgs));
-	strcpy(defaultLoginTarget,find_value_in_cfg_arr("defaultLoginTarget",cfgs));
-	strcpy(doubleSessionTarget,find_value_in_cfg_arr("defaultSessionTarget",cfgs));
-	strcpy(defaultTarget,find_value_in_cfg_arr("defaultTarget",cfgs));
+	strncpy(incorrectLoginTarget,find_value_in_cfg_arr("incorrectLoginTarget",cfgs),FIELDSIZE-1);
+	strncpy(defaultLoginTarget,find_value_in_cfg_arr("defaultLoginTarget",cfgs),FIELDSIZE-1);
+	strncpy(doubleSessionTarget,find_value_in_cfg_arr("defaultSessionTarget",cfgs),FIELDSIZE-1);
+	strncpy(defaultTarget,find_value_in_cfg_arr("defaultTarget",cfgs),FIELDSIZE-1);
 	logging=atoi(find_value_in_cfg_arr("logging",cfgs));
 	smalltimeoutsecs=atoi(find_value_in_cfg_arr("smalltimeoutsecs",cfgs));
 	
