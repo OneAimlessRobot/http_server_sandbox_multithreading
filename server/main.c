@@ -5,7 +5,7 @@
 #include "Includes/server_innards.h"
 #include "Includes/load_logins.h"
 
-int main(int argc, char ** argv){
+int main(void){
 
 	
 	initializeServer();

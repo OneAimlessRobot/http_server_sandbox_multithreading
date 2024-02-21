@@ -10,17 +10,18 @@ extern int smalltimeoutsecs,smalltimeoutusecs;
 extern int bigtimeoutsecs,bigtimeoutusecs;
 extern int port;
 extern int compression;
+extern int compression_level;
+extern int use_fd;
 extern int quota;
 extern int send_socket_size;
 extern int recv_socket_size;
 extern int session_time_usecs;
-extern client* clientToDrop;
 extern client* clients;
 extern char currDir[PATHSIZE];
 extern int serverOn;
 extern FILE* logstream;
 extern pthread_mutex_t socketMtx,clientMtx,serverRunningMtx;
-extern compMethod br,gzip,servComp;
+extern compMethod br,gzip,deflateM,servComp;
 
 /*
 extern char* logfpath,* defaultTarget,

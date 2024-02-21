@@ -7,20 +7,84 @@
 #include "../Includes/send_resource_func.h"
 #include "../Includes/server_innards.h"
 #include <sys/socket.h>
+#include <zlib.h>
 #include <errno.h>
 #include <unistd.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-static char* compressionCmd = "%s -c %s";
+
+#define CHUNK 16384
+//static char* compressionCmd = "%s -c %s";
 //static char* compressionCmd = "gzip -c %s > %s.gzip";
 static char inpathbuff[PATHSIZE*2];
 static char outpathbuff[PATHSIZE*2];
-static char cmd[PATHSIZE*6];
-static int compressFile(char* target,int enable,int result[2]){
+//static char cmd[PATHSIZE*6];
+typedef struct comp_result{
+	int comp_enable,fd;
+	FILE* stream;
+
+
+}comp_result;
+/* Compress from file source to file dest until EOF on source.
+   def() returns Z_OK on success, Z_MEM_ERROR if memory could not be
+   allocated for processing, Z_STREAM_ERROR if an invalid compression
+   level is supplied, Z_VERSION_ERROR if the version of zlib.h and the
+   version of the library linked do not match, or Z_ERRNO if there is
+   an error reading or writing the files. */
+static int def(FILE* source, FILE* dest, int level)
+{
+    int ret, flush;
+    unsigned have;
+    z_stream strm;
+    unsigned char in[CHUNK];
+    unsigned char out[CHUNK];
+
+    /* allocate deflate state */
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    ret = deflateInit(&strm, level);
+    if (ret != Z_OK)
+        return ret;
+    /* compress until end of file */
+    do {
+        
+        strm.avail_in = fread(in, 1, CHUNK, source);
+        if (ferror(source)) {
+            (void)deflateEnd(&strm);
+            return Z_ERRNO;
+        }
+        flush = feof(source) ? Z_FINISH : Z_NO_FLUSH;
+        strm.next_in = in;
+	/* run deflate() on input until output buffer not full, finish
+           compression if all of source has been read in */
+        do {
+
+            strm.avail_out = CHUNK;
+            strm.next_out = out;
+            ret = deflate(&strm, flush);    /* no bad return value */
+            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+            have = CHUNK - strm.avail_out;
+            if (fwrite(out,1,have,dest) != have|| ferror(dest)) {
+                (void)deflateEnd(&strm);
+                return Z_ERRNO;
+            }
+
+        } while (strm.avail_out == 0);
+        assert(strm.avail_in == 0);     /* all input will be used */
+        /* done when last data in file processed */
+    } while (flush != Z_FINISH);
+    assert(ret == Z_STREAM_END);        /* stream will be complete */
+    /* clean up and return */
+    (void)deflateEnd(&strm);
+    return Z_OK;
+}
+/*static int compressFileCmd(char* target,int enable,int result[2]){
 	memset(inpathbuff,0,PATHSIZE*2);
 	snprintf(inpathbuff,(PATHSIZE*2)-1,"%s%s",currDir,target);
 	if(enable){
@@ -72,14 +136,69 @@ static int compressFile(char* target,int enable,int result[2]){
 	}
 	return 0;
 }
+*/
+static int compressFile(char* target,int enable,comp_result* result){
+	memset(inpathbuff,0,PATHSIZE*2);
+	snprintf(inpathbuff,(PATHSIZE*2)-1,"%s%s",currDir,target);
+	if(enable){
+	memset(outpathbuff,0,PATHSIZE*2);
+	snprintf(outpathbuff,(PATHSIZE*2)-1,"%s.%s",inpathbuff,servComp.fileExt);
+	result->fd=open(outpathbuff,O_RDWR,0777);
+	result->stream=fopen(outpathbuff,"rb+");
+	if((!(result->stream))||(result->fd<0)){
+			if(result->stream){
+				fclose(result->stream);
+			
+			}
+			else if(result->fd>=0){
+				close(result->fd);
+			}
+			if(logging){
+			fprintf(logstream,"Invalid (dest) filepath: %s\n%s\n",inpathbuff,strerror(errno));
+			}
+			return -1;
+	
+	}
+	FILE* in;
+	if(!(in=fopen(inpathbuff,"r"))){
+			if(logging){
+			fprintf(logstream,"Invalid (src) filepath: %s\n%s\n",inpathbuff,strerror(errno));
+			}
+			return -1;
+	}
+	
+	def(in,result->stream,compression_level);
+	result->comp_enable=1;
+	}
+	else{
+	result->fd=open(inpathbuff,O_RDONLY,0777);
+	result->stream=fopen(inpathbuff,"r");
+	if((!(result->stream))||(result->fd<0)){
+			if(result->stream){
+				fclose(result->stream);
+			
+			}
+			else if(result->fd>=0){
+				close(result->fd);
+			}
+			if(logging){
+			fprintf(logstream,"Invalid (src) filepath: %s\n%s\n",inpathbuff,strerror(errno));
+			}
+			return -1;
+	
+	}
+	result->comp_enable=0;
+	}
+	return 0;
+}
 
-int sendResource(client* c,char* resourceTarget,char* mimetype,int usefd,int compress){
+int sendResource(client* c,char* resourceTarget,char* mimetype,int compress){
 
 	page p;
 	memset(p.pagepath,0,PATHSIZE);
 	char* ptr= p.pagepath;
 	ptr+=snprintf(ptr,PATHSIZE,"%s%s",currDir,resourceTarget);
-	int result[2]={0};
+	comp_result result={0,-1,NULL};
 	DIR* directory=opendir(p.pagepath);
 	if(directory){
 		closedir(directory);
@@ -93,8 +212,7 @@ int sendResource(client* c,char* resourceTarget,char* mimetype,int usefd,int com
 	if(logging){
 	fprintf(logstream,"Fetching %s...\n",p.pagepath);
 	}
-	if(usefd){
-	if(compressFile(resourceTarget,compress,result)<0){
+	if(compressFile(resourceTarget,compress,&result)<0){
 
 		if(logging){
 
@@ -103,21 +221,27 @@ int sendResource(client* c,char* resourceTarget,char* mimetype,int usefd,int com
 		return -1;
 	}
 	
-	}
 	if(logging){
 	fprintf(logstream,"Done!\n");
 	}
-	if(usefd){
-		lseek(result[0],0,SEEK_END);
-		p.data_size=lseek(result[0],0,SEEK_CUR)+1;
-		lseek(result[0],0,SEEK_SET);
+	if(use_fd){
+		lseek(result.fd,0,SEEK_END);
+		p.data_size=lseek(result.fd,0,SEEK_CUR)+1;
+		lseek(result.fd,0,SEEK_SET);
+		
+	}
+	else {
+		fseek(result.stream,0,SEEK_END);
+		p.data_size=ftell(result.stream)+1;
+		fseek(result.stream,0,SEEK_SET);
 		
 	}
 	char headerBuff[PATHSIZE]={0};
 	int needsDelete=0;
-	if(result[1]){
+	if(result.comp_enable){
 	needsDelete=1;
 	
+
 		fillUpChunkedHeaderComp(headerBuff,chunkedHeaderComp,p.data_size,mimetype,servComp.fileExt);
 	
 	}
@@ -133,12 +257,19 @@ int sendResource(client* c,char* resourceTarget,char* mimetype,int usefd,int com
 				}
 			}
 
-	if(usefd){
-		sendallchunkedfd(c,result[0]);
-		close(result[0]);
-		if(needsDelete){
-			remove(outpathbuff);
-		}
+	if(use_fd){
+		sendallchunkedfd(c,result.fd);
+		
+	}
+	else{
+		sendallchunkedstream(c,result.stream);
+	}
+	
+	close(result.fd);
+	fclose(result.stream);
+	
+	if(needsDelete){
+		remove(outpathbuff);
 	}
 	return 0;
 }

@@ -51,7 +51,7 @@ static void handleVentReq(char* fieldmess,char targetinout[PATHSIZE]){
 	currvent++;
 }
 
-static void handleVideoPostReq(char* fieldmess,char targetinout[PATHSIZE]){
+static void handleVideoPostReq(void){
 	
 	printf("Video posted!!!!\n");
 
@@ -147,7 +147,7 @@ void handleCustomPostReq(client*c,char* target,char* contents,char targetinout[P
 	}
 	else if(!strcmp(target,WRITE_VIDEO_REQ)){
 		
-		handleVideoPostReq(contents,targetinout);
+		handleVideoPostReq();
 
 	}
 	/*else if(!strcmp(nulltermedtarget,writeventreq)){

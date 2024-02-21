@@ -13,5 +13,6 @@ int getMaxNumOfClients(void);
 
 int getCurrNumOfClients(void);
 
+void cleanup(void);
 #endif
 

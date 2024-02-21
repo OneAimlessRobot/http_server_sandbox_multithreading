@@ -24,7 +24,7 @@ static int server_socket,currNumOfClients;
 static struct sockaddr_in server_address, clientAddress;
 
 static fd_set readfds;
-
+static pthread_t con_thread;
 static char addressContainer[INET_ADDRSTRLEN];
 client* getClientArrCopy(void){
 	
@@ -72,30 +72,35 @@ int getMaxNumOfClients(void){
 
 
 }
-static void sigint_handler(int signal){
-	signal=0;
-	
-pthread_mutex_lock(&serverRunningMtx);
-	serverOn=0;
+static void sigint_afterint(int signal){
 
-pthread_mutex_unlock(&serverRunningMtx);
+	printf("%d\n",signal);
+}
+void cleanup(void){
+
+	signal(SIGINT,sigint_afterint);
 	close(server_socket);
 	if(clients){
 	for(int i=0;i<quota;i++){
-
-		if(clients[i].socket){
+		int c_socket=0;
 		pthread_mutex_lock(&socketMtx);
+		if(clients[i].socket){
+		c_socket=clients[i].socket;
 		clients[i].socket=0;
+		close(c_socket);
 		pthread_mutex_unlock(&socketMtx);
+		pthread_join(clients[i].threadid,NULL);
 		}
-		
+		else{
+		pthread_mutex_unlock(&socketMtx);
+
+		}
 	}
 	free(clients);
 	}
 	if(logging){
 	fprintf(logstream,"Adeus! Server out...\n");
 	}
-	fclose(logstream);
 	if(currLogins){
 	
 	freeLogins(&currLogins);
@@ -109,16 +114,29 @@ pthread_mutex_unlock(&serverRunningMtx);
 
 	}
 	printf("Adeus! Server out...\n");
-	exit(-1+signal);
+	fclose(logstream);
+	exit(-1);
 
 }
+static void sigint_handler(int arg){
+	
+pthread_mutex_lock(&serverRunningMtx);
+	serverOn=0;
+
+pthread_mutex_unlock(&serverRunningMtx);
+pthread_join(con_thread,NULL);
+	cleanup();
+}
 static void handleIncommingConnections(void){
-	while(serverOn){
 	
 	FD_ZERO(&readfds);
         FD_SET(server_socket,&readfds);
 	int client_socket;
-	int activity = select( server_socket + 1 , &readfds , NULL , NULL , NULL);
+		struct timeval tv;
+                tv.tv_sec=bigtimeoutsecs;
+                tv.tv_usec=bigtimeoutusecs;
+ 
+	int activity = select( server_socket + 1 , &readfds , NULL , NULL , &tv);
         if ((activity < 0) && (errno!=EINTR))
         {
             printf("select error");
@@ -146,14 +164,9 @@ static void handleIncommingConnections(void){
 		if(!c->socket){
 		pthread_mutex_unlock(&socketMtx);
 		c->socket=client_socket;
-		c->running_time=0.0;
-		memset(c->username,0,FIELDSIZE);
 		memcpy(&c->client_addr,&clientAddress,sizeof(struct sockaddr_in));
-		c->isAdmin=0;
-		c->logged_in=0;
-		memset(c->peerbuff,0,PAGE_DATA_SIZE);
 		pthread_create(&c->threadid,NULL,runClientConnection,(void*)c);
-		pthread_detach(c->threadid);    
+	 	//pthread_detach(c->threadid);
 		if(logging){
 		    fprintf(logstream,"Adding to list of sockets as socket no: %d\n" , c->socket);
                     }
@@ -162,12 +175,17 @@ static void handleIncommingConnections(void){
 		pthread_mutex_unlock(&socketMtx);
 		}
 		}
-            			
-	}
+           if(!activity){
+		if(logging){
+			fprintf(logstream,"No new connections\n");
+		}
+		
+		}
+	
 
 }
 
-static void mainLoop(void){
+static void* mainLoop(void* args){
 	
 	pthread_mutex_lock(&serverRunningMtx);
 	while(serverOn){
@@ -175,12 +193,14 @@ static void mainLoop(void){
 	
 	
 	handleIncommingConnections();
-	
 	pthread_mutex_lock(&serverRunningMtx);
     	}
 	
 	pthread_mutex_unlock(&serverRunningMtx);
-
+	if(logging){
+		fprintf(logstream,"Connection thread out!\n");
+	}
+	return NULL;
 }
 
 void initializeConstants(void){
@@ -202,7 +222,11 @@ void initializeConstants(void){
 	
 	quota=atoi(find_value_in_cfg_arr("quota",cfgs));
 	
+	use_fd=atoi(find_value_in_cfg_arr("use_fd",cfgs));
+	
 	compression=atoi(find_value_in_cfg_arr("compression",cfgs));
+	
+	compression_level=atoi(find_value_in_cfg_arr("compression_level",cfgs));
 	if(quota<=0){
 		
 		quota=500;
@@ -228,9 +252,24 @@ void initializeConstants(void){
 		printf("Config error: timeout must be a non negative 32 bit integer!\n");
 		exit(-1);
 	}
+	if(compression_level<0 || compression_level > 9){
+		
+		printf("Config error: compression level must be an integer between 0 and 9!\n");
+		exit(-1);
+	}
 
 }
+static void initEmptyClient(client* result){
+		result->socket=0;
+		result->running_time=0.0;
+		memset(result->username,0,FIELDSIZE);
+		memset(&result->client_addr,0,sizeof(struct sockaddr_in));
+		result->isAdmin=0;
+		result->logged_in=0;
+		memset(result->peerbuff,0,PAGE_DATA_SIZE);
+		
 
+}
 void initializeServer(void){
 
 	
@@ -249,14 +288,7 @@ void initializeServer(void){
 	memset(clients,0,sizeof(client)*quota);
 	for(int i=0;i<quota;i++){
 
-		clients[i].socket=0;
-		clients[i].running_time=0.0;
-		memset(clients[i].username,0,FIELDSIZE);
-		memset(&clients[i].client_addr,0,sizeof(struct sockaddr_in));
-		clients[i].isAdmin=0;
-		clients[i].logged_in=0;
-		memset(clients[i].peerbuff,0,PAGE_DATA_SIZE);
-		
+		initEmptyClient(&(clients[i]));
 
 	}
 	server_socket= socket(AF_INET,SOCK_STREAM,0);
@@ -288,6 +320,7 @@ void initializeServer(void){
 	socklenpointer=sizeof(clientAddress);
 	loadLogins();
 	servComp=gzip;
-	mainLoop();
+	pthread_create(&con_thread,NULL,mainLoop,NULL);
+	pthread_join(con_thread,NULL);
 }
 

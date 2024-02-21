@@ -27,7 +27,7 @@ socklen_t socklenpointer;
 
 static int sendMediaData(client*c,char* buff,char* mimetype,int compress){
 
-	return sendResource(c,buff,mimetype,USEFD,compress);
+	return sendResource(c,buff,mimetype,compress);
 }
 
 static void dropConnection(client*c){
@@ -77,7 +77,6 @@ static void handleCurrentActivity(client*c,http_request req){
 
 					send(c->socket,notFoundHeader,strlen(notFoundHeader),0);
 				}
-				deleteClientListingHTML();
 			}
 			else{
 				int isDir=sendMediaData(c,header.target,header.mimetype,compress);
@@ -100,7 +99,6 @@ static void handleCurrentActivity(client*c,http_request req){
 					send(c->socket,notFoundHeader,strlen(notFoundHeader),0);
 
 				}
-				deleteClientListingHTML();
 			}
 			else{
 				int result=sendMediaData(c,header.target,header.mimetype,compress);
@@ -219,5 +217,9 @@ pthread_mutex_lock(&socketMtx);
 }
 pthread_mutex_unlock(&serverRunningMtx);
 pthread_mutex_unlock(&socketMtx);
-	return NULL;
+if(logging){
+
+	fprintf(logstream,"Client stopped!\n");
+}
+return NULL;
 }

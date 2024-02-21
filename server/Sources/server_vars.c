@@ -24,7 +24,10 @@ int session_time_usecs;
 
 int compression;
 
-client* clientToDrop;
+int compression_level;
+
+int use_fd;
+
 client* clients=NULL;
 char currDir[PATHSIZE];
 int serverOn=0;
@@ -32,7 +35,8 @@ FILE* logstream=NULL;
 pthread_mutex_t socketMtx=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t clientMtx= PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t serverRunningMtx=PTHREAD_MUTEX_INITIALIZER;
-compMethod br = {"brotli","br"," br"},gzip = {"gzip","gzip"," gzip"};
+compMethod br = {"brotli","br"," br"},gzip = {"gzip","gzip"," gzip"},
+deflateM = {"deflate","deflate"," deflate"};
 compMethod servComp;
 
 

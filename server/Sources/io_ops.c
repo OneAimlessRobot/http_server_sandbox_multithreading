@@ -168,9 +168,76 @@ char chunkbuff[2 * BUFFSIZE + 10];  // Additional space for size header and CRLF
 int numread;
 int sent=0;
 pthread_mutex_lock(&clientMtx);
-clientToDrop=c;
 pthread_mutex_unlock(&clientMtx);
 while ((numread = read(fd,buff, BUFFSIZE)) > 0) {
+    int truesize = snprintf(chunkbuff, sizeof(chunkbuff), "%x\r\n", numread);
+    memcpy(chunkbuff + truesize, buff, numread);
+    memcpy(chunkbuff + truesize + numread, "\r\n", 2);
+
+    int totalsent = 0;
+    while (totalsent < truesize + numread + 2) {
+        errno=0;
+	sent = SEND_FUNC_TO_USE(c->socket, chunkbuff + totalsent, truesize + numread + 2 - totalsent);
+	if(sent==-2){
+
+		if(logging){
+		fprintf(logstream,"Timeout no sending!!!!: %s\nsocket %d\n",strerror(errno),c->socket);
+                }
+		continue;
+	}
+	if(sent<0){
+	
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if(logging){
+		fprintf(logstream,"Block no sending!!!!: %s\nsocket %d\n",strerror(errno),c->socket);
+                }
+		break;
+		//continue;
+	
+        }
+
+        else if(errno == ECONNRESET){
+		if(logging){
+                fprintf(logstream,"Conexão largada!!\nSIGPIPE!!!!!: %s\n",strerror(errno));
+                }
+		//raise(SIGPIPE);
+		handleDisconnect(c);
+		return 0;
+		//continue
+        }
+	else {
+		if(logging){
+                fprintf(logstream,"Outro erro qualquer!!!!!: %d %s\n",errno,strerror(errno));
+                }
+	
+		break;
+		//continue;
+	
+	}
+        }
+	else{
+	if(logging){
+	fprintf(logstream,"send de %d bytes feito!!!!!\n",sent);
+	}
+	totalsent += sent;
+    	}
+	}
+}
+
+// Send final zero-sized chunk
+send(c->socket, "0\r\n\r\n", 5, 0);
+return 0;
+}
+
+int sendallchunkedstream(client*c,FILE* stream){
+
+char buff[BUFFSIZE];
+char chunkbuff[2 * BUFFSIZE + 10];  // Additional space for size header and CRLF
+int numread;
+int sent=0;
+pthread_mutex_lock(&clientMtx);
+pthread_mutex_unlock(&clientMtx);
+while ((numread = fread(buff,1,BUFFSIZE,stream)) > 0) {
     int truesize = snprintf(chunkbuff, sizeof(chunkbuff), "%x\r\n", numread);
     memcpy(chunkbuff + truesize, buff, numread);
     memcpy(chunkbuff + truesize + numread, "\r\n", 2);
@@ -234,7 +301,6 @@ int sendnormalfd(client*c,int fd){
 
 char buff[BUFFSIZE];
 int numread;
-clientToDrop=c;
 while ((numread = read(fd,buff, BUFFSIZE)) > 0) {
 	int totalsent = 0;
     while (totalsent < numread) {
