@@ -117,14 +117,7 @@ static void printClientHTMLEntry(int id,client* c,int fd){
         dprintf(fd,"\n<p>Cliente numero: %d , ip %s , port %d\n" ,id,inet_ntoa(c->client_addr.sin_addr) , ntohs(c->client_addr.sin_port));
 	dprintf(fd,"Tamanho de socket: recv %d; send %d;</p>\n" ,getSocketRecvBuffSize(c->socket) , getSocketSendBuffSize(c->socket));
 	dprintf(fd,"\n<p> Username: %s</p>\n" ,c->username);
-	dprintf(fd,"\n<p> Curr session time (secs): %lf</p>\n" ,(c->running_time)/1000000);
-	dprintf(fd,"\n<p> Logged in?: %d</p>\n" ,c->logged_in);
 	dprintf(fd,"\n<p> Socket no: %d</p>\n" ,c->socket);
-	if(c->isAdmin){
-		
-		dprintf(fd,"\n<p class='ADMIN'>ADMIN</p>\n");
-
-	}
 	
 
 }
@@ -132,9 +125,7 @@ void generateClientListing(char targetinout[PATHSIZE]){
 	char path[PATHSIZE]={0};
 	snprintf(path,PATHSIZE,"%s%s",currDir,tmpClients);
 	int fd=	open(path,O_TRUNC|O_WRONLY|O_CREAT,0777);
-	client* clients=getFullClientArrCopy();
-	int maxQuota=getMaxNumOfClients();
-	int currQuota=getCurrNumOfClients();
+	client** clients=getFullClientArrCopy();
 	
 	
 	dprintf(fd,"<!DOCTYPE html>\n<html>\n<head>\n");
@@ -142,20 +133,17 @@ void generateClientListing(char targetinout[PATHSIZE]){
 	dprintf(fd,"\n<base href=''>\n</head>\n<body>\n");
 	dprintf(fd,"<br>\n<a href='%s'>Go back</a>\n<br>\n",defaultTarget);
 	dprintf(fd,"<br>\n<form id='submitbutton' method='POST' action='/seeclients'>\n<input type='submit' name='button' value='REFRESH'>\n</form>\n<br>\n");
-	dprintf(fd,"\n<br>\n<h1>Ocupacao: %d/%d</h1>\n<br>\n<br>\n<br>" ,currQuota,maxQuota);
-  	
-	for(int i=0;i<maxQuota;i++){
-	if(clients[i].socket){
-		printClientHTMLEntry(i,&(clients[i]),fd);
-	}
-	else{
-	dprintf(fd,"\n<p>Posicao %d desocupada</p>\n<br>\n" ,i);
-	}
+	dprintf(fd,"\n<br>\n<h1>Ocupacao: %d/%d</h1>\n<br>\n<br>\n<br>" ,0,0);
+  
+	for(int i=0;clients[i];i++){
+
+		printClientHTMLEntry(i,(clients[i]),fd);
+
 	}
 	dprintf(fd,"<br>\n");
 	dprintf(fd,"</body>\n</html>\n");
 	close(fd);
-	free(clients);
+	freeClientArr(&clients);
 	memcpy(targetinout,tmpClients,strlen(tmpClients));
 
 }

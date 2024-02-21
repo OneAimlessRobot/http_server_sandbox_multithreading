@@ -5,9 +5,11 @@
 
 void initializeServer(void);
 
-client* getClientArrCopy(void);
+client** getClientArrCopy(void);
 
-client* getFullClientArrCopy(void);
+client** getFullClientArrCopy(void);
+
+void freeClientArr(client*** arr);
 
 int getMaxNumOfClients(void);
 

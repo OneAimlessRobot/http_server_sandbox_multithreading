@@ -26,38 +26,68 @@ static struct sockaddr_in server_address, clientAddress;
 static fd_set readfds;
 static pthread_t con_thread;
 static char addressContainer[INET_ADDRSTRLEN];
-client* getClientArrCopy(void){
-	
-	client* result= malloc(currNumOfClients*sizeof(client));
-	for(int i=0;i<currNumOfClients;i++){
+static void initEmptyClient(client* result){
+		FD_ZERO(&result->readfd);
+		result->socket=0;
+		memset(result->username,0,FIELDSIZE);
+		memset(&result->client_addr,0,sizeof(struct sockaddr_in));
+		result->disconnected=0;
+		pthread_mutex_init(&result->discon_mtx,NULL);
+		pthread_mutex_init(&result->sock_mtx,NULL);
 		
-		memset(result[i].username,0,FIELDSIZE);
-		result[i].socket=clients[i].socket;
-		result[i].isAdmin=clients[i].isAdmin;
-		result[i].logged_in=clients[i].logged_in;
-		result[i].running_time=clients[i].running_time;
-		strncpy(result[i].username,clients[i].username,FIELDSIZE);
-		memcpy(&result[i].client_addr,&clients[i].client_addr,sizeof(clients[i].client_addr));
-	}
+
+}
+static client* spawnEmptyClient(void){
+	client* result= malloc(sizeof(client));
+		initEmptyClient(result);
+	return result;
+
+}
+static client* dupClient(client* c){
+	client* result= malloc(sizeof(client));
+		result->socket=c->socket;
+		memcpy(result->username,c->username,FIELDSIZE);
+		memcpy(&result->client_addr,&c->client_addr,sizeof(struct sockaddr_in));
+		result->disconnected=c->disconnected;
 	return result;
 
 }
 
-client* getFullClientArrCopy(void){
+client** getClientArrCopy(void){
 	
-	client* result= malloc(quota*sizeof(client));
-	for(int i=0;i<quota;i++){
+	client** result= malloc((currNumOfClients+1)*sizeof(client*));
+	int i;
+	for(i=0;clients[i];i++){
 		
-		memset(result[i].username,0,FIELDSIZE);
-		result[i].socket=clients[i].socket;
-		result[i].isAdmin=clients[i].isAdmin;
-		result[i].logged_in=clients[i].logged_in;
-		result[i].running_time=clients[i].running_time;
-		strncpy(result[i].username,clients[i].username,FIELDSIZE);
-		memcpy(&result[i].client_addr,&clients[i].client_addr,sizeof(clients[i].client_addr));
+		result[i]=dupClient(clients[i]);
 	}
+	result[i]=NULL;
 	return result;
 
+}
+
+client** getFullClientArrCopy(void){
+	client** result= malloc((quota+1)*sizeof(client*));
+	int i;
+	for(i=0;clients[i];i++){
+		
+		result[i]=dupClient(clients[i]);
+	}
+	result[i]=NULL;
+	return result;
+}
+void freeClientArr(client*** arr){
+	if(*arr){
+	for(int i=0;i<quota;i++){
+		if((*arr)[i]){
+		client* c=(*arr)[i];
+		free(c);
+		(*arr)[i]=NULL;
+		}
+	}
+	free(*arr);
+	*arr=NULL;
+	}
 }
 
 int getCurrNumOfClients(void){
@@ -81,22 +111,21 @@ void cleanup(void){
 	signal(SIGINT,sigint_afterint);
 	close(server_socket);
 	if(clients){
+	
+	if(logging){
+	fprintf(logstream,"Adeus clientes...\n");
+	}
 	for(int i=0;i<quota;i++){
-		int c_socket=0;
-		pthread_mutex_lock(&socketMtx);
-		if(clients[i].socket){
-		c_socket=clients[i].socket;
-		clients[i].socket=0;
-		close(c_socket);
-		pthread_mutex_unlock(&socketMtx);
-		pthread_join(clients[i].threadid,NULL);
-		}
-		else{
-		pthread_mutex_unlock(&socketMtx);
-
+		if(clients[i]){
+		handleDisconnect(clients[i]);
+		while(clients[i]);
+			if(logging){
+			fprintf(logstream,"Destroyed client!!!\n");
+			}
+		
 		}
 	}
-	free(clients);
+	freeClientArr(&clients);
 	}
 	if(logging){
 	fprintf(logstream,"Adeus! Server out...\n");
@@ -124,14 +153,12 @@ pthread_mutex_lock(&serverRunningMtx);
 	serverOn=0;
 
 pthread_mutex_unlock(&serverRunningMtx);
-pthread_join(con_thread,NULL);
-	cleanup();
 }
 static void handleIncommingConnections(void){
 	
 	FD_ZERO(&readfds);
         FD_SET(server_socket,&readfds);
-	int client_socket;
+	int client_socket=-1;
 		struct timeval tv;
                 tv.tv_sec=bigtimeoutsecs;
                 tv.tv_usec=bigtimeoutusecs;
@@ -140,8 +167,9 @@ static void handleIncommingConnections(void){
         if ((activity < 0) && (errno!=EINTR))
         {
             printf("select error");
-        }
-	if(FD_ISSET(server_socket,&readfds)){
+            return;
+	}
+	else if(activity>0){
 
 		
 		if ((client_socket = accept(server_socket,(struct sockaddr*)(&clientAddress),&socklenpointer))<0)
@@ -159,23 +187,21 @@ static void handleIncommingConnections(void){
 		fprintf(logstream,"Client connected , ip %s , port %d \n" ,inet_ntoa(clientAddress.sin_addr) , ntohs(clientAddress.sin_port));
         	}
 		for(int i=0;i<quota;i++){
-		client* c=&(clients[i]);
-		pthread_mutex_lock(&socketMtx);
-		if(!c->socket){
-		pthread_mutex_unlock(&socketMtx);
-		c->socket=client_socket;
-		memcpy(&c->client_addr,&clientAddress,sizeof(struct sockaddr_in));
-		pthread_create(&c->threadid,NULL,runClientConnection,(void*)c);
-	 	//pthread_detach(c->threadid);
+		if(!clients[i]){
+		clients[i]=spawnEmptyClient();
+		clients[i]->socket=client_socket;
+		memcpy(&clients[i]->client_addr,&clientAddress,sizeof(struct sockaddr_in));
+		pthread_create(&clients[i]->threadid,NULL,runClientPConnection,(void*)(&(clients[i])));
+	 	pthread_detach(clients[i]->threadid);
 		if(logging){
-		    fprintf(logstream,"Adding to list of sockets as socket no: %d\n" , c->socket);
+		    fprintf(logstream,"Adding to list of sockets as socket no: %d\n" , clients[i]->socket);
                     }
-		    break;
+		   break;
                 }
-		pthread_mutex_unlock(&socketMtx);
+		
 		}
 		}
-           if(!activity){
+           else{
 		if(logging){
 			fprintf(logstream,"No new connections\n");
 		}
@@ -186,13 +212,15 @@ static void handleIncommingConnections(void){
 }
 
 static void* mainLoop(void* args){
-	
+	int localServerOn=serverOn;
 	pthread_mutex_lock(&serverRunningMtx);
 	while(serverOn){
+	localServerOn=serverOn;
 	pthread_mutex_unlock(&serverRunningMtx);
 	
-	
+	if(localServerOn){
 	handleIncommingConnections();
+	}
 	pthread_mutex_lock(&serverRunningMtx);
     	}
 	
@@ -209,7 +237,6 @@ void initializeConstants(void){
 	strncpy(defaultLoginTarget,find_value_in_cfg_arr("defaultLoginTarget",cfgs),FIELDSIZE-1);
 	strncpy(doubleSessionTarget,find_value_in_cfg_arr("defaultSessionTarget",cfgs),FIELDSIZE-1);
 	strncpy(defaultTarget,find_value_in_cfg_arr("defaultTarget",cfgs),FIELDSIZE-1);
-	logging=atoi(find_value_in_cfg_arr("logging",cfgs));
 	smalltimeoutsecs=atoi(find_value_in_cfg_arr("smalltimeoutsecs",cfgs));
 	
 	smalltimeoutusecs=atoi(find_value_in_cfg_arr("smalltimeoutusecs",cfgs));
@@ -227,70 +254,60 @@ void initializeConstants(void){
 	compression=atoi(find_value_in_cfg_arr("compression",cfgs));
 	
 	compression_level=atoi(find_value_in_cfg_arr("compression_level",cfgs));
+	
+	logging=atoi(find_value_in_cfg_arr("logging",cfgs));
 	if(quota<=0){
 		
 		quota=500;
 
 	}
+	if(logging<0){
+		
+		printf("Config error: logging level must be a non negative 32 bit integer!\n");
+		raise(SIGINT);
+	}
 	if(smalltimeoutsecs<0){
 		
 		printf("Config error: timeout must be a non negative 32 bit integer!\n");
-		exit(-1);
+		raise(SIGINT);
 	}
 	if(smalltimeoutusecs<0){
 		
 		printf("Config error: timeout must be a non negative 32 bit integer!\n");
-		exit(-1);
+		raise(SIGINT);
 	}
 	if(bigtimeoutsecs<0){
 		
 		printf("Config error: timeout must be a non negative 32 bit integer!\n");
-		exit(-1);
+		raise(SIGINT);
 	}
 	if(bigtimeoutusecs<0){
 		
 		printf("Config error: timeout must be a non negative 32 bit integer!\n");
-		exit(-1);
+		raise(SIGINT);
 	}
 	if(compression_level<0 || compression_level > 9){
 		
 		printf("Config error: compression level must be an integer between 0 and 9!\n");
-		exit(-1);
+		raise(SIGINT);
 	}
-
-}
-static void initEmptyClient(client* result){
-		result->socket=0;
-		result->running_time=0.0;
-		memset(result->username,0,FIELDSIZE);
-		memset(&result->client_addr,0,sizeof(struct sockaddr_in));
-		result->isAdmin=0;
-		result->logged_in=0;
-		memset(result->peerbuff,0,PAGE_DATA_SIZE);
-		
 
 }
 void initializeServer(void){
 
+	signal(SIGINT,sigint_handler);
 	
 	memset(currDir,0,PATHSIZE);
-	
 	getcwd(currDir,PATHSIZE);
 
 	loadCfg();
 	initializeConstants();
-	
+
 	logstream=stdout;
 	serverOn=1;
 	currNumOfClients=0;
-	signal(SIGINT,sigint_handler);
-	clients=malloc(sizeof(client)*quota);
-	memset(clients,0,sizeof(client)*quota);
-	for(int i=0;i<quota;i++){
-
-		initEmptyClient(&(clients[i]));
-
-	}
+	clients=malloc(sizeof(client*)*(quota+1));
+	memset(clients,0,sizeof(client*)*(quota+1));
 	server_socket= socket(AF_INET,SOCK_STREAM,0);
         int ptr=1;
         setsockopt(server_socket,SOL_SOCKET,SO_REUSEADDR,(char*)&ptr,sizeof(ptr));
@@ -322,5 +339,6 @@ void initializeServer(void){
 	servComp=gzip;
 	pthread_create(&con_thread,NULL,mainLoop,NULL);
 	pthread_join(con_thread,NULL);
+	cleanup();
 }
 

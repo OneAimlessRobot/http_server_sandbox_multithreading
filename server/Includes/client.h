@@ -4,16 +4,17 @@ typedef struct client{
 	
 	pthread_t threadid;
 	fd_set readfd;
-	char peerbuff[PAGE_DATA_SIZE];
+	char* peerbuff;
 	int socket;
-	double running_time;
 	char username[FIELDSIZE];
-	int isAdmin;
-	int logged_in;
+	int disconnected;
+	pthread_mutex_t discon_mtx,sock_mtx;
 	struct sockaddr_in client_addr;
+	
 }client;
 
 void* runClientConnection(void* args);
+void* runClientPConnection(void* args);
 void handleDisconnect(client* c);
 
 #endif

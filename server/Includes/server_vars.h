@@ -16,11 +16,11 @@ extern int quota;
 extern int send_socket_size;
 extern int recv_socket_size;
 extern int session_time_usecs;
-extern client* clients;
+extern client** clients;
 extern char currDir[PATHSIZE];
 extern int serverOn;
 extern FILE* logstream;
-extern pthread_mutex_t socketMtx,clientMtx,serverRunningMtx;
+extern pthread_mutex_t serverRunningMtx;
 extern compMethod br,gzip,deflateM,servComp;
 
 /*

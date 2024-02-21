@@ -28,7 +28,7 @@ int compression_level;
 
 int use_fd;
 
-client* clients=NULL;
+client** clients=NULL;
 char currDir[PATHSIZE];
 int serverOn=0;
 FILE* logstream=NULL;

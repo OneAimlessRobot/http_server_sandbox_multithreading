@@ -19,7 +19,6 @@
 #include "../Includes/resource_consts.h"
 #include "../Includes/io_ops.h"
 #define SEND_FUNC_TO_USE sendsome
-//#define SEND_FUNC_TO_USE write
 
 
 int readsome(int sd,char buff[],u_int64_t size){
@@ -103,31 +102,12 @@ int readall(client*c,char* buff,int64_t size){
 		 total=0;
 while(total<size){
         len=readsome(c->socket,buff+total,size-total);
-	if(!len||len==-2){
+	if(len<=0){
 	
-        //fprintf(logstream,"Timeout no reading!!!!: %s\nsocket %d\n",strerror(errno),sd);
                 break;
-	}
-	else if(len<0){
-	if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if(logging){
-		//fprintf(logstream,"Block no sending!!!!: %s\nsocket %d\n",strerror(errno),sd);
-                }
-		break;
-		//continue;
 	
-        }
-	else if(errno){
-		if(logging){
-                fprintf(logstream,"Outro erro qualquer!!!!!:%d %s\n",errno,strerror(errno));
-                }
-		break;
-		//continue
-	
-	}
 	}
 	else{
-	//printf("Li %ld bytes!!!!\n",len); 
 	total+=len;
 	}
 	if(total==size){
@@ -141,12 +121,19 @@ while(total<size){
 		fprintf(logstream,"Li %ld ao todo!!!! readall bem sucedido!! A socket e %d\n",total,c->socket);
 		}
 	}
+	else if(errno==EPIPE){
+
+		if(logging){
+		fprintf(logstream,"Pipe partido!!! A socket e %d\n",c->socket);
+		}
+		return -2;
+	}
 	else if(errno==ENOTCONN){
 		if(logging){
 		fprintf(logstream,"Li %ld ao todo!!!! readall saiu com erro!!!!!:\nAvisando server para desconectar!\n%s\n",total,strerror(errno));
 		}
-		handleDisconnect(c);
-		return total;
+		
+		return -2;
 	}
 	else if(len!=-2){
 		if(logging){
@@ -167,8 +154,6 @@ char buff[BUFFSIZE];
 char chunkbuff[2 * BUFFSIZE + 10];  // Additional space for size header and CRLF
 int numread;
 int sent=0;
-pthread_mutex_lock(&clientMtx);
-pthread_mutex_unlock(&clientMtx);
 while ((numread = read(fd,buff, BUFFSIZE)) > 0) {
     int truesize = snprintf(chunkbuff, sizeof(chunkbuff), "%x\r\n", numread);
     memcpy(chunkbuff + truesize, buff, numread);
@@ -192,19 +177,23 @@ while ((numread = read(fd,buff, BUFFSIZE)) > 0) {
 		fprintf(logstream,"Block no sending!!!!: %s\nsocket %d\n",strerror(errno),c->socket);
                 }
 		break;
-		//continue;
 	
         }
+	else if(errno==EPIPE){
 
+		if(logging){
+		fprintf(logstream,"Pipe partido!!! A socket e %d\n",c->socket);
+		}
+		handleDisconnect(c);
+		return -1;
+	}
         else if(errno == ECONNRESET){
 		if(logging){
-                fprintf(logstream,"Conexão largada!!\nSIGPIPE!!!!!: %s\n",strerror(errno));
+                fprintf(logstream,"Conexão largada!! SIGPIPE!!!!!: %s\n",strerror(errno));
                 }
-		//raise(SIGPIPE);
 		handleDisconnect(c);
-		return 0;
-		//continue
-        }
+		return -1;
+	}
 	else {
 		if(logging){
                 fprintf(logstream,"Outro erro qualquer!!!!!: %d %s\n",errno,strerror(errno));
@@ -235,8 +224,6 @@ char buff[BUFFSIZE];
 char chunkbuff[2 * BUFFSIZE + 10];  // Additional space for size header and CRLF
 int numread;
 int sent=0;
-pthread_mutex_lock(&clientMtx);
-pthread_mutex_unlock(&clientMtx);
 while ((numread = fread(buff,1,BUFFSIZE,stream)) > 0) {
     int truesize = snprintf(chunkbuff, sizeof(chunkbuff), "%x\r\n", numread);
     memcpy(chunkbuff + truesize, buff, numread);
@@ -260,27 +247,29 @@ while ((numread = fread(buff,1,BUFFSIZE,stream)) > 0) {
 		fprintf(logstream,"Block no sending!!!!: %s\nsocket %d\n",strerror(errno),c->socket);
                 }
 		break;
-		//continue;
-	
-        }
 
+        }
+	else if(errno==EPIPE){
+
+		if(logging){
+		fprintf(logstream,"Pipe partido!!! A socket e %d\n",c->socket);
+		}
+		handleDisconnect(c);
+		return -1;
+	}
         else if(errno == ECONNRESET){
 		if(logging){
                 fprintf(logstream,"Conexão largada!!\nSIGPIPE!!!!!: %s\n",strerror(errno));
                 }
-		//raise(SIGPIPE);
 		handleDisconnect(c);
-		return 0;
-		//continue
-        }
+		return -1;
+	}
 	else {
 		if(logging){
                 fprintf(logstream,"Outro erro qualquer!!!!!: %d %s\n",errno,strerror(errno));
                 }
 	
 		break;
-		//continue;
-	
 	}
         }
 	else{
@@ -297,62 +286,3 @@ send(c->socket, "0\r\n\r\n", 5, 0);
 return 0;
 }
 
-int sendnormalfd(client*c,int fd){
-
-char buff[BUFFSIZE];
-int numread;
-while ((numread = read(fd,buff, BUFFSIZE)) > 0) {
-	int totalsent = 0;
-    while (totalsent < numread) {
-        int sent = SEND_FUNC_TO_USE(c->socket, buff+totalsent, numread - totalsent);
-        if(sent<0){
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if(logging){
-		fprintf(logstream,"Block no sending!!!!: %s\nsocket %d\n",strerror(errno),c->socket);
-                }
-		break;
-		//continue;
-	
-        }
-
-        else if(errno == ECONNRESET){
-		if(logging){
-                fprintf(logstream,"Conexão largada!!\nSIGPIPE!!!!!: %s\n",strerror(errno));
-                }
-		//raise(SIGINT);
-		return 0;
-		//continue
-        }
-	else{
-		if(logging){
-                fprintf(logstream,"Outro erro qualquer!!!!!: %s\n",strerror(errno));
-                }
-		break;
-		//continue;
-	
-	}
-        }
-	else{
-	totalsent += sent;
-    	}
-	}
-        if(errno){
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                if(logging){
-		fprintf(logstream,"Exiting due to block!!!!: %s\nsocket %d\n",strerror(errno),c->socket);
-                }
-		//break;
-		continue;
-        }
-	else{
-		if(logging){
-		fprintf(logstream,"Exiting due to some other error!!!!: %s\nsocket %d\n",strerror(errno),c->socket);
-                }
-		break;
-		
-	}
-	}
-}
-send(c->socket, "\r\n\r\n", 5, 0);
-return 0;
-}

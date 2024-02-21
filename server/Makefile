@@ -1,6 +1,6 @@
 BINARY= server.exe
 
-LDLIBS= -pthread -lpthread -lz
+LDLIBS= -pthread -lz
 INCLUDE= ./Includes .
 SOURCES= . ./Sources
 RESDIR= ./resources
@@ -10,7 +10,7 @@ CURRDIR=echo `pwd`
 CC= clang
 DEPFLAGS= -MP -MD
 
-CFLAGS= -Wall -DPROGRAMPATHAUX="$(CURRDIR)"  -Wextra -g $(foreach D, $(INCLUDE), -I$(D)) $(DEPFLAGS) `sdl2-config --libs`
+CFLAGS= -Wall -DPROGRAMPATHAUX="$(CURRDIR)"  -Wextra -g $(foreach D, $(INCLUDE), -I$(D)) $(DEPFLAGS)
 
 SOURCEFILES=$(foreach D,$(SOURCES), $(wildcard $(D)/*.c))
 
@@ -34,7 +34,7 @@ $(BINARY): $(OBJECTS)
 
 
 %.o:%.c
-	$(CC) -g  $(CFLAGS) -c -o $@ $<  $(LDLIBS)
+	$(CC) -g  $(CFLAGS) -c -o $@ $< 
 	echo $(CFLAGS)
 
 clean:

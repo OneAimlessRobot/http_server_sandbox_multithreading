@@ -30,24 +30,11 @@ static int sendMediaData(client*c,char* buff,char* mimetype,int compress){
 	return sendResource(c,buff,mimetype,compress);
 }
 
-static void dropConnection(client*c){
-getpeername(c->socket , (struct sockaddr*)&c->client_addr , (socklen_t*)&socklenpointer);
-                    if(logging){
-			fprintf(logstream,"Host disconnected. Cliente com ip %s , port %d \n" ,inet_ntoa(c->client_addr.sin_addr) , ntohs(c->client_addr.sin_port));
-                   
-                    }
-                        //Close the socket and mark as 0 in lis>
-
-                    close(c->socket);
-}
 void handleDisconnect(client* c){
-		pthread_mutex_lock(&socketMtx);
-		dropConnection(c);
-		//Close the socket and mark as 0 in list for reuse
+		pthread_mutex_lock(&c->discon_mtx);
                
-                    c->socket = 0;
-		    c->running_time=0.0;
-		pthread_mutex_unlock(&socketMtx);
+                c->disconnected=1;
+		pthread_mutex_unlock(&c->discon_mtx);
 }
 
 static void handleCurrentActivity(client*c,http_request req){
@@ -123,14 +110,16 @@ static void handleCurrentActivity(client*c,http_request req){
 void handleConnection(client* c){
  			memset(c->peerbuff,0,PAGE_DATA_SIZE);
 			http_request req;
+			memset(&req,0,sizeof(http_request));
 			http_header header;
+			memset(&header,0,sizeof(http_header));
 			if(READ_FUNC_TO_USE(c,c->peerbuff,PAGE_DATA_SIZE-1)!=-2){
                   	if(errno == ECONNRESET){
 				handleDisconnect(c);
 			}
 			else if(strlen(c->peerbuff)){
 				spawnHTTPRequest(c->peerbuff,&header,&req);
-				if(logging){
+				if(logging>0){
 				fprintf(logstream,"Recebemos request!!!:\n");
 				
 				print_http_req(logstream,req);
@@ -142,9 +131,9 @@ void handleConnection(client* c){
 				if(READ_FUNC_TO_USE(c,req.data,req.header->content_length)!=-2){
 
 				
-
+					if(logging>0){
 					fprintf(logstream,"Recebemos dados!!!: %s\n",req.data);
-				
+					}
 				}
 				}
 				handleCurrentActivity(c,req);
@@ -159,67 +148,47 @@ void handleConnection(client* c){
 			
 }
 
-
-static void initializeClient(client* c,double running_time){
-
-FD_ZERO(&c->readfd);
-
-        if(c->logged_in){
-	double client_run_time=c->running_time;
-        c->running_time=client_run_time+running_time;	
-	if(c->running_time>session_time_usecs){
-
-		c->logged_in=0;
-	}
-	}
-pthread_mutex_lock(&socketMtx);
-         int sd = c->socket;
-	if(sd > 0)
-                FD_SET( sd , &c->readfd);
-pthread_mutex_unlock(&socketMtx);
-            
-        
-
-}
-
 static void sigpipe_handler(int signal){
 	signal=0;
-	if(logging){
+	if(logging>10){
 	fprintf(logstream,"SIGPIPE!!!!!\n");
 	}
 }
 
-void* runClientConnection(void* args){
-struct timeval start, end;
-   	long secs_used;
+void* runClientPConnection(void* args){
+
+
 	signal(SIGPIPE,sigpipe_handler);
 
-double running_time=0.0;
-	client* c= (client*)args;
+	client** cl= (client**)args;
+	client* c = *cl;
+c->peerbuff=malloc(PAGE_DATA_SIZE);
+memset(c->peerbuff,0,PAGE_DATA_SIZE);
 pthread_mutex_lock(&serverRunningMtx);
-pthread_mutex_lock(&socketMtx);
-while(serverOn&&c->socket){
+pthread_mutex_lock(&c->discon_mtx);
+while(serverOn&&!c->disconnected){
 pthread_mutex_unlock(&serverRunningMtx);
-pthread_mutex_unlock(&socketMtx);
-	gettimeofday(&start, NULL);
-	initializeClient(c,running_time);
-	if(c->socket&&FD_ISSET(c->socket,&c->readfd)){
+pthread_mutex_unlock(&c->discon_mtx);
+	
 		handleConnection(c);
-	}
-
-gettimeofday(&end, NULL);
-secs_used=(end.tv_sec - start.tv_sec);
-
-running_time=(double) (((secs_used*1000000.0) + end.tv_usec) -(double) (start.tv_usec));
-
+	
 pthread_mutex_lock(&serverRunningMtx);
-pthread_mutex_lock(&socketMtx);
+pthread_mutex_lock(&c->discon_mtx);
 }
 pthread_mutex_unlock(&serverRunningMtx);
-pthread_mutex_unlock(&socketMtx);
-if(logging){
-
-	fprintf(logstream,"Client stopped!\n");
-}
+pthread_mutex_unlock(&c->discon_mtx);
+close(c->socket);
+free(c->peerbuff);
+pthread_mutex_destroy(&c->discon_mtx);
+pthread_mutex_destroy(&c->sock_mtx);
+	getpeername(c->socket , (struct sockaddr*)&c->client_addr , (socklen_t*)&socklenpointer);
+                    if(logging>0){
+			fprintf(logstream,"Host disconnected. Cliente com socket %d ip %s , port %d \n" ,c->socket,inet_ntoa(c->client_addr.sin_addr) , ntohs(c->client_addr.sin_port));
+                   
+                 }
+free(*cl);
+*cl=NULL;
 return NULL;
+
+
 }

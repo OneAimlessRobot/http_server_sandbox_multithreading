@@ -9,8 +9,5 @@ int sendallchunkedfd(client* c,int fd);
 
 int sendallchunkedstream(client* c,FILE* stream);
 
-int sendnormalfd(client* c,int fd);
-
-int send_in_chunks_chunked_chat_gpt(client*c, int fd);
 
 #endif

@@ -76,27 +76,6 @@ int isCustomPostReq(char* nulltermedtarget){
 	return result;
 }
 
-static void kickClientHandler(char* contents,char targetinout[PATHSIZE]){
-
-char* argv2[ARGVMAX]={0};
-makeargvdelim(contents,"&",argv2,ARGVMAX);
-char* pair[2]={0};
-splitString(argv2[0],"=",pair);
-	fprintf(logstream,"Adeus |%s|!\n",pair[1]);
-	
-if(kickClient(pair[1])){
-	
-	//if(logging){
-
-		fprintf(logstream,"Adeus %s!\n",pair[1]);
-	//}
-
-}
-
-strncpy(targetinout,defaultTarget,PATHSIZE);
-
-}
-
 void handleCustomGetReq(client* c,char*target,char* body,char targetinout[PATHSIZE]){
 	char* targetcopy= strdup(target);
 	char* argv2[2];
@@ -138,11 +117,6 @@ void handleCustomPostReq(client*c,char* target,char* contents,char targetinout[P
 	}
 	else if(!strcmp(target,SIGN_OUT_REQ)){
 		handleLogout(c,targetinout);
-
-	}
-	else if(!strcmp(target,KICK_CLIENT_REQ)){
-		
-		kickClientHandler(contents,targetinout);
 
 	}
 	else if(!strcmp(target,WRITE_VIDEO_REQ)){
