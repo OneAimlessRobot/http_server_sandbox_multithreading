@@ -39,7 +39,6 @@ void handleLogin(client* c,char* fieldmess,char targetinout[PATHSIZE]){
 	memcpy(targetinout,defaultLoginTarget,strlen(defaultLoginTarget));
 	return;
 	}
-		getpeername(c->socket , (struct sockaddr*)&c->client_addr , (socklen_t*)&socklenpointer);
 		char* username[2]={0};
 		splitString(argv2[0],"=",username);
 		if(!strlen(username[1])){

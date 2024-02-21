@@ -56,10 +56,12 @@ static client* dupClient(client* c){
 client** getClientArrCopy(void){
 	
 	client** result= malloc((currNumOfClients+1)*sizeof(client*));
+	memset(result,0,(currNumOfClients+1)*sizeof(client*));
 	int i;
-	for(i=0;clients[i];i++){
-		
+	for(i=0;i<currNumOfClients;i++){
+		if(clients[i]){
 		result[i]=dupClient(clients[i]);
+		}
 	}
 	result[i]=NULL;
 	return result;
@@ -68,10 +70,12 @@ client** getClientArrCopy(void){
 
 client** getFullClientArrCopy(void){
 	client** result= malloc((quota+1)*sizeof(client*));
+	memset(result,0,(quota+1)*sizeof(client*));
 	int i;
-	for(i=0;clients[i];i++){
-		
+	for(i=0;i<quota;i++){
+		if(clients[i]){
 		result[i]=dupClient(clients[i]);
+		}
 	}
 	result[i]=NULL;
 	return result;
